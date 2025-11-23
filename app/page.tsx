@@ -1,14 +1,8 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { routing } from "@/i18n/routing";
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect("/gigpacks");
-  } else {
-    redirect("/auth/sign-in");
-  }
+export default function RootPage() {
+  // Redirect root to default locale
+  redirect(`/${routing.defaultLocale}`);
 }
 

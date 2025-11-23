@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import { GigPack, GigPackTheme } from "@/lib/types";
 import { RefreshCw } from "lucide-react";
 import { MinimalLayout } from "@/components/gigpack/layouts/minimal-layout";
@@ -14,6 +15,7 @@ interface PublicGigPackViewProps {
 }
 
 export function PublicGigPackView({ initialGigPack, slug }: PublicGigPackViewProps) {
+  const locale = useLocale();
   const [gigPack, setGigPack] = useState(initialGigPack);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isChecking, setIsChecking] = useState(false);
@@ -108,7 +110,7 @@ export function PublicGigPackView({ initialGigPack, slug }: PublicGigPackViewPro
         <div className="bg-card border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
           <RefreshCw className={`h-3 w-3 ${isChecking ? 'animate-spin text-primary' : ''}`} />
           <span className="hidden sm:inline">
-            Updated {lastUpdated.toLocaleString('en-US', { 
+            {lastUpdated.toLocaleString(locale === 'he' ? 'he-IL' : 'en-US', { 
               month: 'short', 
               day: 'numeric', 
               hour: 'numeric', 

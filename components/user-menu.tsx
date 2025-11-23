@@ -3,6 +3,7 @@
 import { User } from "@supabase/supabase-js";
 import { LogOut, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,13 +23,14 @@ interface UserMenuProps {
 export function UserMenu({ user }: UserMenuProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("auth");
 
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     toast({
-      title: "Signed out",
-      description: "You've been signed out successfully.",
+      title: t("signedOut"),
+      description: t("signedOutDescription"),
     });
     router.push("/auth/sign-in");
     router.refresh();
@@ -50,7 +52,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign out</span>
+          <span>{t("signOut")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

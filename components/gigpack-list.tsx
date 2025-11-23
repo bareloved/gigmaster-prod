@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Edit, Link as LinkIcon, Music, Clock, Trash2 } from "lucide-react";
@@ -25,6 +26,10 @@ interface GigPackListProps {
 
 export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackListProps) {
   const { toast } = useToast();
+  const locale = useLocale();
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
+  const tGigpack = useTranslations("gigpack");
 
   const copyPublicLink = (slug: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -36,8 +41,8 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
     
     // Instant toast without waiting
     toast({
-      title: "✓ Copied",
-      description: "Link ready to share",
+      title: tCommon("copied"),
+      description: tCommon("linkReady"),
       duration: 2000,
     });
   };
@@ -46,7 +51,7 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
     e.preventDefault();
     e.stopPropagation();
     
-    if (!window.confirm(`Are you sure you want to delete "${packTitle}"? This action cannot be undone.`)) {
+    if (!window.confirm(tGigpack("deleteConfirm", { title: packTitle }))) {
       return;
     }
 
@@ -63,24 +68,24 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
             <Music className="h-16 w-16 text-primary" />
           </div>
           <div className="text-center space-y-3">
-            <h3 className="text-2xl font-bold">No gigs packed yet</h3>
+            <h3 className="text-2xl font-bold">{t("noGigsPacked")}</h3>
             <p className="text-muted-foreground max-w-md text-lg">
-              Create your first GigPack for your next show
+              {t("noGigsDescription")}
             </p>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Share all the important details—setlist, times, venue, logistics—with your band in one clean page.
+              {t("noGigsSubDescription")}
             </p>
           </div>
           {onCreate ? (
             <Button onClick={onCreate} size="lg" className="mt-4">
               <Music className="mr-2 h-5 w-5" />
-              Create Your First GigPack
+              {t("createFirstGigPack")}
             </Button>
           ) : (
             <Button asChild size="lg" className="mt-4">
               <Link href="/gigpacks/new">
                 <Music className="mr-2 h-5 w-5" />
-                Create Your First GigPack
+                {t("createFirstGigPack")}
               </Link>
             </Button>
           )}
@@ -119,13 +124,13 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
                 {pack.date && (
                   <div className="date-pill">
                     <Calendar className="h-3.5 w-3.5" />
-                    <span>{formatDate(pack.date)}</span>
+                    <span>{formatDate(pack.date, locale)}</span>
                   </div>
                 )}
                 {pack.call_time && (
                   <div className="inline-flex items-center rounded-lg bg-accent/10 px-3 py-1.5 text-sm font-semibold text-accent border border-accent/20">
                     <Clock className="h-3.5 w-3.5 mr-1.5" />
-                    Call: {pack.call_time}
+                    {tGigpack("call")}: {pack.call_time}
                   </div>
                 )}
               </div>
@@ -151,7 +156,7 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
                   onClick={() => onEdit(pack.id)}
                 >
                   <Edit className="mr-1.5 h-3.5 w-3.5" />
-                  Edit
+                  {tCommon("edit")}
                 </Button>
               ) : (
                 <Button 
@@ -162,7 +167,7 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
                 >
                   <Link href={`/gigpacks/${pack.id}/edit`}>
                     <Edit className="mr-1.5 h-3.5 w-3.5" />
-                    Edit
+                    {tCommon("edit")}
                   </Link>
                 </Button>
               )}
@@ -173,7 +178,7 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
                 onClick={(e) => copyPublicLink(pack.public_slug, e)}
               >
                 <LinkIcon className="mr-1.5 h-3.5 w-3.5" />
-                Copy
+                {tGigpack("copy")}
               </Button>
               {onDelete && (
                 <Button

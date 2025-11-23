@@ -1,0 +1,34 @@
+"use client";
+
+import { useEffect } from "react";
+import { useLocale } from "next-intl";
+import { rtlLocales } from "@/i18n/config";
+
+interface LocaleHtmlAttributesProps {
+  locale: string;
+}
+
+export function LocaleHtmlAttributes({ locale }: LocaleHtmlAttributesProps) {
+  const isRtl = rtlLocales.includes(locale as any);
+
+  useEffect(() => {
+    // Set lang and dir attributes on the html element immediately
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = locale;
+      document.documentElement.dir = isRtl ? "rtl" : "ltr";
+    }
+  }, [locale, isRtl]);
+
+  // Also set via script tag for immediate execution (before React hydrates)
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          document.documentElement.lang = "${locale}";
+          document.documentElement.dir = "${isRtl ? "rtl" : "ltr"}";
+        `,
+      }}
+    />
+  );
+}
+

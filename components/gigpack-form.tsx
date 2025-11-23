@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { GigPack, LineupMember } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,9 @@ interface GigPackFormProps {
 export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSuccess, onDelete }: GigPackFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("gigpack");
+  const tCommon = useTranslations("common");
+  const tAuth = useTranslations("auth");
   const [, startTransition] = useTransition();
   const isEditing = !!gigPack;
 
@@ -88,8 +92,8 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
 
       if (!user) {
         toast({
-          title: "Error",
-          description: "You must be logged in",
+          title: tCommon("error"),
+          description: tAuth("mustBeLoggedIn"),
           variant: "destructive",
         });
         return;
@@ -116,8 +120,8 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
 
       if (isEditing) {
         toast({
-          title: "✓ Saved",
-          description: "Changes are live",
+          title: tCommon("saved"),
+          description: t("savedDescription"),
           duration: 2000,
         });
 
@@ -155,8 +159,8 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
         }
 
         toast({
-          title: "✓ Created",
-          description: "Gig Pack ready",
+          title: t("created"),
+          description: t("createdDescription"),
           duration: 2000,
         });
 
@@ -169,8 +173,8 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
     } catch (error) {
       console.error("Error saving gig pack:", error);
       toast({
-        title: "Error",
-        description: "Failed to save",
+        title: tCommon("error"),
+        description: t("failedToSave"),
         variant: "destructive",
       });
       setJustSaved(false);
@@ -184,8 +188,8 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
     const url = `${window.location.origin}/g/${gigPack.public_slug}`;
     navigator.clipboard.writeText(url);
     toast({
-      title: "✓ Copied",
-      description: "Ready to share",
+      title: tCommon("copied"),
+      description: tCommon("readyToShare"),
       duration: 2000,
     });
   };
@@ -198,7 +202,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
   const handleDelete = async () => {
     if (!gigPack || !onDelete) return;
     
-    if (!window.confirm(`Are you sure you want to delete "${gigPack.title}"? This action cannot be undone.`)) {
+    if (!window.confirm(t("deleteConfirm", { title: gigPack.title }))) {
       return;
     }
 
@@ -211,17 +215,17 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
       <div className="space-y-4">
         <div className="gig-section-header">
           <HandDrawnSquiggle className="text-primary" />
-          <span>Core Information</span>
+          <span>{t("coreInformation")}</span>
         </div>
         <Card className="border-2">
           <CardContent className="pt-6 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Gig Title *</Label>
+            <Label htmlFor="title">{t("gigTitleRequired")}</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Summer Festival Main Stage"
+              placeholder={t("gigTitlePlaceholder")}
               required
               disabled={isLoading}
               autoFocus
@@ -229,19 +233,19 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bandName">Band / Project Name</Label>
+            <Label htmlFor="bandName">{t("bandName")}</Label>
             <Input
               id="bandName"
               value={bandName}
               onChange={(e) => setBandName(e.target.value)}
-              placeholder="The Jazz Quartet"
+              placeholder={t("bandNamePlaceholder")}
               disabled={isLoading}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">{t("date")}</Label>
               <Input
                 id="date"
                 type="date"
@@ -252,7 +256,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="callTime">Call Time</Label>
+              <Label htmlFor="callTime">{t("callTime")}</Label>
               <Input
                 id="callTime"
                 type="time"
@@ -263,7 +267,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="onStageTime">On Stage Time</Label>
+              <Label htmlFor="onStageTime">{t("onStageTime")}</Label>
               <Input
                 id="onStageTime"
                 type="time"
@@ -275,35 +279,35 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="venueName">Venue Name</Label>
+            <Label htmlFor="venueName">{t("venueName")}</Label>
             <Input
               id="venueName"
               value={venueName}
               onChange={(e) => setVenueName(e.target.value)}
-              placeholder="The Blue Note"
+              placeholder={t("venueNamePlaceholder")}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="venueAddress">Venue Address</Label>
+            <Label htmlFor="venueAddress">{t("venueAddress")}</Label>
             <Input
               id="venueAddress"
               value={venueAddress}
               onChange={(e) => setVenueAddress(e.target.value)}
-              placeholder="123 Music St, Jazz City, JC 12345"
+              placeholder={t("venueAddressPlaceholder")}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="venueMapsUrl">Venue Maps URL</Label>
+            <Label htmlFor="venueMapsUrl">{t("venueMapsUrl")}</Label>
             <Input
               id="venueMapsUrl"
               type="url"
               value={venueMapsUrl}
               onChange={(e) => setVenueMapsUrl(e.target.value)}
-              placeholder="https://maps.google.com/..."
+              placeholder={t("venueMapsUrlPlaceholder")}
               disabled={isLoading}
             />
           </div>
@@ -317,7 +321,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
       <div className="space-y-4">
         <div className="gig-section-header">
           <HandDrawnSquiggle className="text-primary" />
-          <span>Lineup</span>
+          <span>{t("lineup")}</span>
         </div>
         <Card className="border-2">
           <CardContent className="pt-6 space-y-4">
@@ -325,19 +329,19 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
             <div key={index} className="flex gap-2 items-start">
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
                 <Input
-                  placeholder="Role (e.g., Vocals)"
+                  placeholder={t("rolePlaceholder")}
                   value={member.role}
                   onChange={(e) => updateLineupMember(index, "role", e.target.value)}
                   disabled={isLoading}
                 />
                 <Input
-                  placeholder="Name (optional)"
+                  placeholder={t("namePlaceholder")}
                   value={member.name || ""}
                   onChange={(e) => updateLineupMember(index, "name", e.target.value)}
                   disabled={isLoading}
                 />
                 <Input
-                  placeholder="Notes (optional)"
+                  placeholder={t("notesPlaceholder")}
                   value={member.notes || ""}
                   onChange={(e) => updateLineupMember(index, "notes", e.target.value)}
                   disabled={isLoading}
@@ -364,7 +368,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
             disabled={isLoading}
           >
             <Plus className="mr-2 h-4 w-4" />
-            Add Member
+            {t("addMember")}
           </Button>
         </CardContent>
         </Card>
@@ -376,12 +380,12 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
       <div className="space-y-4">
         <div className="gig-section-header">
           <HandDrawnSquiggle className="text-primary" />
-          <span>Music / Setlist</span>
+          <span>{t("musicSetlist")}</span>
         </div>
         <Card className="border-2">
           <CardContent className="pt-6">
           <Textarea
-            placeholder="Song Name - Artist - Key&#10;Another Song - Artist - Key"
+            placeholder={t("setlistPlaceholder")}
             value={setlist}
             onChange={(e) => setSetlist(e.target.value)}
             rows={10}
@@ -398,12 +402,12 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
         <div className="gig-section-header">
           <HandDrawnSquiggle className="text-primary" />
           <Palette className="h-4 w-4" />
-          <span>Design</span>
+          <span>{t("design")}</span>
         </div>
         <Card className="border-2">
           <CardContent className="pt-6 space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
-              Choose how your public GigPack page will look
+              {t("designDescription")}
             </p>
             <RadioGroup value={theme} onValueChange={(value) => setTheme(value as GigPackTheme)}>
               <div className="space-y-4">
@@ -411,10 +415,10 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
                   <RadioGroupItem value="minimal" id="theme-minimal" className="mt-0.5" />
                   <div className="flex-1">
                     <Label htmlFor="theme-minimal" className="text-base font-semibold cursor-pointer">
-                      Minimal
+                      {t("themeMinimal")}
                     </Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Clean, modern design with lots of whitespace and subtle accents
+                      {t("themeMinimalDescription")}
                     </p>
                   </div>
                 </div>
@@ -422,10 +426,10 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
                   <RadioGroupItem value="vintage_poster" id="theme-vintage" className="mt-0.5" />
                   <div className="flex-1">
                     <Label htmlFor="theme-vintage" className="text-base font-semibold cursor-pointer">
-                      Vintage Poster
+                      {t("themeVintagePoster")}
                     </Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Bold, poster-like layout with retro styling and strong visual hierarchy
+                      {t("themeVintagePosterDescription")}
                     </p>
                   </div>
                 </div>
@@ -433,10 +437,10 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
                   <RadioGroupItem value="social_card" id="theme-social" className="mt-0.5" />
                   <div className="flex-1">
                     <Label htmlFor="theme-social" className="text-base font-semibold cursor-pointer">
-                      Social Card
+                      {t("themeSocialCard")}
                     </Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Social media-inspired layout with hero banner and card-based sections
+                      {t("themeSocialCardDescription")}
                     </p>
                   </div>
                 </div>
@@ -452,69 +456,69 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
       <div className="space-y-4">
         <div className="gig-section-header">
           <HandDrawnSquiggle className="text-primary" />
-          <span>Logistics</span>
+          <span>{t("logistics")}</span>
         </div>
         <Card className="border-2">
           <CardContent className="pt-6 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="dressCode">Dress Code</Label>
+            <Label htmlFor="dressCode">{t("dressCode")}</Label>
             <Input
               id="dressCode"
               value={dressCode}
               onChange={(e) => setDressCode(e.target.value)}
-              placeholder="All black, smart casual, etc."
+              placeholder={t("dressCodePlaceholder")}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="backlineNotes">Backline / Gear Notes</Label>
+            <Label htmlFor="backlineNotes">{t("backlineNotes")}</Label>
             <Textarea
               id="backlineNotes"
               value={backlineNotes}
               onChange={(e) => setBacklineNotes(e.target.value)}
-              placeholder="PA system provided, bring your own instrument..."
+              placeholder={t("backlineNotesPlaceholder")}
               rows={3}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="parkingNotes">Parking / Load-in Notes</Label>
+            <Label htmlFor="parkingNotes">{t("parkingNotes")}</Label>
             <Textarea
               id="parkingNotes"
               value={parkingNotes}
               onChange={(e) => setParkingNotes(e.target.value)}
-              placeholder="Street parking available, loading dock at rear..."
+              placeholder={t("parkingNotesPlaceholder")}
               rows={3}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="paymentNotes">Payment Notes</Label>
+            <Label htmlFor="paymentNotes">{t("paymentNotes")}</Label>
             <Textarea
               id="paymentNotes"
               value={paymentNotes}
               onChange={(e) => setPaymentNotes(e.target.value)}
-              placeholder="$500 split evenly, paid after the show..."
+              placeholder={t("paymentNotesPlaceholder")}
               rows={3}
               disabled={isLoading}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="internalNotes">Internal Notes (Private)</Label>
+            <Label htmlFor="internalNotes">{t("internalNotes")}</Label>
             <Textarea
               id="internalNotes"
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
-              placeholder="These notes are only visible to you, not on the public page..."
+              placeholder={t("internalNotesPlaceholder")}
               rows={3}
               disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">
-              These notes will NOT appear on the public gig pack page
+              {t("internalNotesDescription")}
             </p>
           </div>
         </CardContent>
@@ -532,18 +536,18 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
             {justSaved ? (
               <>
                 <Check className="mr-2 h-4 w-4" />
-                Saved
+                {tCommon("saved")}
               </>
             ) : isLoading ? (
               <>
                 <span className="animate-pulse">
-                  {isEditing ? "Saving..." : "Creating..."}
+                  {isEditing ? tCommon("saving") : tCommon("creating")}
                 </span>
               </>
             ) : isEditing ? (
-              "Save Changes"
+              tCommon("save")
             ) : (
-              "Create Gig Pack"
+              t("createGigPackButton")
             )}
           </Button>
           <Button
@@ -558,7 +562,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
             }}
             disabled={isLoading}
           >
-            {isEditing ? "← Back" : "Cancel"}
+            {isEditing ? tCommon("back") : tCommon("cancel")}
           </Button>
         </div>
 
@@ -571,7 +575,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
               onClick={copyPublicLink}
             >
               <LinkIcon className="mr-2 h-4 w-4" />
-              Copy Link
+              {tCommon("copyLink")}
             </Button>
             <Button
               type="button"
@@ -580,7 +584,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
               onClick={openPublicView}
             >
               <ExternalLink className="mr-2 h-4 w-4" />
-              Preview
+              {tCommon("preview")}
             </Button>
             {onDelete && (
               <Button
@@ -592,7 +596,7 @@ export function GigPackForm({ gigPack, onCancel, onCreateSuccess, onUpdateSucces
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {tCommon("delete")}
               </Button>
             )}
           </div>

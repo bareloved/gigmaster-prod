@@ -22,10 +22,13 @@ export function generateSlug(title: string): string {
 
 /**
  * Format a date for display
+ * @param date - Date string or Date object
+ * @param locale - Locale code (default: "en")
  */
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date, locale: string = "en"): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("en-US", {
+  const localeCode = locale === "he" ? "he-IL" : "en-US";
+  return d.toLocaleDateString(localeCode, {
     weekday: "long",
     year: "numeric",
     month: "long",
