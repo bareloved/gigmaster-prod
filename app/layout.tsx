@@ -1,6 +1,20 @@
+import type { Metadata } from "next";
 import "./globals.css";
-import { inter } from "@/lib/fonts";
+import { heebo, anton } from "@/lib/fonts";
 import { ThemeProvider } from "@/components/theme-provider";
+
+export const metadata: Metadata = {
+  title: {
+    default: "GigPack",
+    template: "%s | GigPack",
+  },
+  description: "Pack, plan, and share every gig with GigPack.",
+  icons: {
+    icon: "/branding/gigpack-logo.png",
+    shortcut: "/branding/gigpack-logo.png",
+    apple: "/branding/gigpack-logo.png",
+  },
+};
 
 export default function RootLayout({
   children,
@@ -11,7 +25,7 @@ export default function RootLayout({
   // ThemeProvider here enables dark mode for non-locale routes like /g/[slug]
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${heebo.className} ${heebo.variable} ${anton.variable}`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

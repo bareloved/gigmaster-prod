@@ -9,6 +9,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { HoverUnderline } from "@/components/hand-drawn/hover-underline";
 import { GigPackShareDialog } from "@/components/gigpack-share-dialog";
+import { AppLogo } from "@/components/app-logo";
 
 interface GigPackListProps {
   gigPacks: {
@@ -60,9 +61,7 @@ export function GigPackList({ gigPacks, onEdit, onCreate, onDelete }: GigPackLis
     return (
       <Card className="border-2 border-dashed bg-card/50">
         <CardContent className="flex flex-col items-center justify-center py-20 space-y-6">
-          <div className="rounded-full bg-primary/10 p-6">
-            <Music className="h-16 w-16 text-primary" />
-          </div>
+          <AppLogo variant="icon" size="md" />
           <div className="text-center space-y-3">
             <h3 className="text-2xl font-bold">{t("noGigsPacked")}</h3>
             <p className="text-muted-foreground max-w-md text-lg">

@@ -56,20 +56,35 @@ function VenueAutocompleteInner({
         const fgColor = getCSSVar("--foreground")
         const borderColor = getCSSVar("--input")
         const mutedColor = getCSSVar("--muted-foreground")
+        const ringColor = getCSSVar("--ring")
 
         input.style.cssText = `
-          height: 36px !important;
+          height: 32px !important;
           width: 100% !important;
           border-radius: 6px !important;
           border: 1px solid ${borderColor} !important;
           background: ${bgColor} !important;
           color: ${fgColor} !important;
-          padding: 0 12px !important;
+          padding: 0.25rem 0.5rem !important;
           padding-right: 40px !important;
           font-size: 14px !important;
           outline: none !important;
           box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+          transition: background-color 0.2s, border-color 0.2s !important;
         `
+        
+        // Remove any existing event listeners to prevent duplicates
+        const focusHandler = () => {
+          input.style.borderColor = ringColor || borderColor
+        }
+        const blurHandler = () => {
+          input.style.borderColor = borderColor
+        }
+        
+        input.removeEventListener('focus', focusHandler)
+        input.removeEventListener('blur', blurHandler)
+        input.addEventListener('focus', focusHandler)
+        input.addEventListener('blur', blurHandler)
         
         // Check if we already added placeholder styles
         if (!shadowRoot.querySelector("[data-placeholder-style]")) {
@@ -159,11 +174,11 @@ function VenueAutocompleteInner({
   if (!places) {
     return (
       <div className={cn(
-        "flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm md:text-sm",
+        "flex h-8 w-full items-center rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm",
         className
       )}>
         <span className="flex-1 text-muted-foreground">{placeholder}</span>
-        <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
+        <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
       </div>
     )
   }

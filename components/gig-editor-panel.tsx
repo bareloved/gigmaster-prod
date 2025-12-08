@@ -289,7 +289,6 @@ export function GigEditorPanel({
   const [parkingNotes, setParkingNotes] = useState(gigPack?.parking_notes || "");
   const [paymentNotes, setPaymentNotes] = useState(gigPack?.payment_notes || "");
   const [internalNotes, setInternalNotes] = useState(gigPack?.internal_notes || "");
-  const [gigMood, setGigMood] = useState(gigPack?.gig_mood || "");
   const [theme, setTheme] = useState<GigPackTheme>((gigPack?.theme || "minimal") as GigPackTheme);
   const [isLoading, setIsLoading] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
@@ -321,7 +320,6 @@ export function GigEditorPanel({
     setBacklineNotes(values.backlineNotes || "");
     setParkingNotes(values.parkingNotes || "");
     setPaymentNotes(values.paymentNotes || "");
-    setGigMood(values.gigMood || "");
     setSetlistStructured(values.setlistStructured || []);
     setPackingChecklist(values.packingChecklist || []);
     
@@ -359,7 +357,6 @@ export function GigEditorPanel({
     setParkingNotes("");
     setPaymentNotes("");
     setInternalNotes("");
-    setGigMood("");
     setTheme("minimal");
     setAccentColor("");
     setPosterSkin("paper");
@@ -391,7 +388,6 @@ export function GigEditorPanel({
       setParkingNotes(gigPack.parking_notes || "");
       setPaymentNotes(gigPack.payment_notes || "");
       setInternalNotes(gigPack.internal_notes || "");
-      setGigMood(gigPack.gig_mood || "");
       setBandLogoUrl(gigPack.band_logo_url || "");
       setHeroImageUrl(gigPack.hero_image_url || "");
       setAccentColor(gigPack.accent_color || "");
@@ -580,7 +576,6 @@ export function GigEditorPanel({
         parking_notes: parkingNotes || null,
         payment_notes: paymentNotes || null,
         internal_notes: internalNotes || null,
-        gig_mood: gigMood || null,
         theme: theme || "minimal",
         band_logo_url: bandLogoUrl || null,
         hero_image_url: heroImageUrl || null,
@@ -930,9 +925,8 @@ export function GigEditorPanel({
                 </MetadataRow>
 
                 {/* Call Time */}
-                <MetadataRow label={t("callTime")}>
-                  <Clock3 className="h-4 w-4 text-muted-foreground" />
-                  <div className="w-32">
+                <MetadataRow label={t("soundcheckTime")}>
+                  <div className="w-24">
                     <TimePicker
                       value={callTime}
                       onChange={setCallTime}
@@ -943,8 +937,7 @@ export function GigEditorPanel({
 
                 {/* On Stage Time */}
                 <MetadataRow label={t("onStageTime")}>
-                  <Clock3 className="h-4 w-4 text-muted-foreground" />
-                  <div className="w-32">
+                  <div className="w-24">
                     <TimePicker
                       value={onStageTime}
                       onChange={setOnStageTime}
@@ -977,42 +970,6 @@ export function GigEditorPanel({
                   </div>
                 </MetadataRow>
 
-                {/* Gig Mood */}
-                <MetadataRow label={t("gigMood")}>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        disabled={isLoading}
-                        className={cn(
-                          "flex items-center gap-2 px-2 py-1 -mx-2 rounded transition-colors",
-                          "hover:bg-accent/50 text-sm",
-                          gigMood ? "text-foreground" : "text-muted-foreground"
-                        )}
-                      >
-                        <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        {gigMood || t("selectMood")}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-1" align="start">
-                      <div className="grid gap-1">
-                        {["High energy", "Acoustic", "Jazz", "Party", "Lounge", "Club night", "Retro", "Outdoor"].map((vibe) => (
-                          <button
-                            key={vibe}
-                            type="button"
-                            onClick={() => setGigMood(vibe)}
-                            className={cn(
-                              "w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent transition-colors",
-                              gigMood === vibe && "bg-accent font-medium"
-                            )}
-                          >
-                            {vibe}
-                          </button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </MetadataRow>
               </div>
 
               {/* ============================================================
@@ -1394,7 +1351,6 @@ export function GigEditorPanel({
           backlineNotes,
           parkingNotes,
           paymentNotes,
-          gigMood,
           setlistStructured,
           packingChecklist,
         }}

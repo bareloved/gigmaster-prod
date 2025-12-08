@@ -1,10 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Music } from "lucide-react";
-import { UserMenu } from "@/components/user-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { Link } from "@/i18n/routing";
+import { AppHeader } from "@/components/app-header";
 
 export default async function GigPacksLayout({
   children,
@@ -23,19 +19,7 @@ export default async function GigPacksLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/gigpacks" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Music className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">GigPack</h1>
-          </Link>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <ThemeToggle />
-            <UserMenu user={user} />
-          </div>
-        </div>
-      </header>
+      <AppHeader user={user} />
       <main className="container mx-auto px-4 py-8">
         {children}
       </main>
