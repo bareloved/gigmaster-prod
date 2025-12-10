@@ -2,9 +2,9 @@
 
 import { GigPack } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Music, Users, Shirt, Package, ParkingCircle, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, MapPin, Music, Users, Shirt, Package, ParkingCircle, DollarSign, Paperclip, ExternalLink } from "lucide-react";
 import { HandDrawnCornerBracket } from "@/components/hand-drawn/accents";
-import { StructuredSetlist } from "@/components/structured-setlist";
 import { PackingChecklist } from "@/components/packing-checklist";
 
 interface VintagePosterLayoutProps {
@@ -233,7 +233,7 @@ export function VintagePosterLayout({ gigPack, openMaps, slug }: VintagePosterLa
             )}
 
             {/* Setlist - Printed-style typography */}
-            {(gigPack.setlist_structured || gigPack.setlist) && (
+            {gigPack.setlist && (
               <div className="space-y-4">
                 {/* Section Header - Stamp-like label with accent color */}
                 <div className="flex items-center gap-2 border-t-2 pt-4" style={{ borderColor: accentColor + '40' }}>
@@ -245,18 +245,9 @@ export function VintagePosterLayout({ gigPack, openMaps, slug }: VintagePosterLa
                   </div>
                 </div>
                 
-                {/* Structured setlist takes priority */}
-                {gigPack.setlist_structured && gigPack.setlist_structured.length > 0 ? (
-                  <StructuredSetlist 
-                    sections={gigPack.setlist_structured} 
-                    variant="vintage"
-                    accentColor={accentColor}
-                  />
-                ) : (
-                  /* Fallback to text setlist */
                 <div className="bg-[hsl(var(--muted))]/60 dark:bg-[hsl(var(--muted))]/40 border-2 border-muted dark:border-muted/50 rounded-lg p-5 md:p-6 shadow-inner">
                   <div className="space-y-0.5">
-                      {gigPack.setlist?.split('\n').map((line, index) => {
+                    {gigPack.setlist.split('\n').map((line, index) => {
                       if (!line.trim()) {
                         return <div key={index} className="h-1"></div>;
                       }
@@ -264,7 +255,7 @@ export function VintagePosterLayout({ gigPack, openMaps, slug }: VintagePosterLa
                       return (
                         <div key={index} className="flex gap-3 py-1.5 border-b border-dashed border-muted/60 dark:border-muted/40 last:border-0">
                           {/* Song Number */}
-                            <span className="font-black min-w-[2rem] text-xs md:text-sm tabular-nums" style={{ color: accentColor }}>
+                          <span className="font-black min-w-[2rem] text-xs md:text-sm tabular-nums" style={{ color: accentColor }}>
                             {index + 1}.
                           </span>
                           {/* Song Title - Bold */}
@@ -282,7 +273,51 @@ export function VintagePosterLayout({ gigPack, openMaps, slug }: VintagePosterLa
                     })}
                   </div>
                 </div>
-                )}
+              </div>
+            )}
+
+            {/* Materials */}
+            {gigPack.materials && gigPack.materials.length > 0 && (
+              <div className="space-y-4">
+                {/* Section Header - Stamp-like label with accent color */}
+                <div className="flex items-center gap-2 border-t-2 pt-4" style={{ borderColor: accentColor + '40' }}>
+                  <div className="px-3 py-1.5 rounded border" style={{ backgroundColor: accentColor + '15', borderColor: accentColor + '40' }}>
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] font-black" style={{ color: accentColor }}>
+                      <Paperclip className="h-3.5 w-3.5" />
+                      <span>MATERIALS</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  {gigPack.materials.map((material) => (
+                    <div key={material.id} className="bg-muted/40 dark:bg-muted/30 border-t-4 rounded-lg p-5" style={{ borderTopColor: accentColor }}>
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="font-bold text-sm flex-1 text-foreground dark:text-foreground">{material.label}</div>
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {material.kind === "rehearsal" && "Rehearsal"}
+                          {material.kind === "performance" && "Performance"}
+                          {material.kind === "charts" && "Charts"}
+                          {material.kind === "reference" && "Reference"}
+                          {material.kind === "other" && "Other"}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mb-3">
+                        {material.url}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs font-bold"
+                        onClick={() => window.open(material.url, '_blank', 'noopener,noreferrer')}
+                        style={{ borderColor: accentColor, color: accentColor }}
+                      >
+                        <ExternalLink className="mr-2 h-3 w-3" />
+                        OPEN
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

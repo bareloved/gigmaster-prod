@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { heebo, anton } from "@/lib/fonts";
+import { heebo, anton, zalandoSansEn } from "@/lib/fonts";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default function RootLayout({
   // ThemeProvider here enables dark mode for non-locale routes like /g/[slug]
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${heebo.className} ${heebo.variable} ${anton.variable}`}>
+      <body className={`${heebo.className} ${heebo.variable} ${anton.variable} ${zalandoSansEn.variable}`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

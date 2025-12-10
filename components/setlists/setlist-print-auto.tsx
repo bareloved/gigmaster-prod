@@ -97,12 +97,6 @@ export function SetlistAutoPrint({
     const rawAvailable = totalHeight - headerHeight;
     const availableHeight = Math.max(0, rawAvailable - 8);
     if (availableHeight <= 0 || listHeight <= 0) {
-      console.log("[SETLIST AUTOSIZE] invalid metrics", {
-        totalHeight,
-        headerHeight,
-        listHeight,
-        availableHeight,
-      });
       return;
     }
 
@@ -145,19 +139,7 @@ export function SetlistAutoPrint({
       newFontSize = 38;
     }
 
-    console.log("[SETLIST AUTOSIZE TUNED]", {
-      lineCount,
-      totalHeight,
-      headerHeight,
-      listHeight,
-      availableHeight,
-      fillRatio,
-      rawScale,
-      boost,
-      scale,
-      newFontSize,
-    });
-
+    // Auto-size calculation complete
     setFontSizePx(newFontSize);
     setHasSized(true);
   }, [lines.length, hasSized]);

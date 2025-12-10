@@ -39,3 +39,12 @@ export const notoSansHebrew = localFont({
   preload: false,
 });
 
+// Zalando Sans SemiExpanded - English UI font only (Variable Font)
+export const zalandoSansEn = localFont({
+  src: "../public/fonts/ZalandoSansSemiExpanded-VariableFont_wght.ttf",
+  weight: "100 900",
+  variable: "--font-zalando-en",
+  display: "swap",
+  preload: true,
+});
+

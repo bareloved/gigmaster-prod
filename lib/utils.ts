@@ -37,14 +37,6 @@ export function formatDate(date: string | Date, locale: string = "en"): string {
 }
 
 /**
- * Format time for display
- */
-export function formatTime(time: string): string {
-  // Simple time formatter - expects "HH:MM" format
-  return time;
-}
-
-/**
  * Get the full public URL for a GigPack
  * @param slug - The public slug of the GigPack
  * @returns The full URL to the public GigPack page

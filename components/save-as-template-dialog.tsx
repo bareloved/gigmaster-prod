@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { createUserTemplate, extractFormValuesToTemplateDefaults } from "@/lib/userTemplates";
-import { GigPackTemplateDefaultValues, SetlistSection, PackingChecklistItem } from "@/lib/types";
+import { GigPackTemplateDefaultValues, PackingChecklistItem, SetlistSection } from "@/lib/types";
 import { Loader2, Save } from "lucide-react";
 
 // Common emoji icons for templates
@@ -40,7 +40,7 @@ interface SaveAsTemplateDialogProps {
     parkingNotes: string;
     paymentNotes: string;
     gigMood?: string;
-    setlistStructured: SetlistSection[];
+    setlistStructured?: SetlistSection[];
     packingChecklist: PackingChecklistItem[];
   };
   onSuccess?: () => void;
@@ -190,9 +190,6 @@ export function SaveAsTemplateDialog({
               {formValues.title && <li>{t("previewTitle")}: {formValues.title}</li>}
               {formValues.dressCode && <li>{t("previewDressCode")}</li>}
               {formValues.theme && <li>{t("previewTheme")}: {formValues.theme}</li>}
-              {formValues.setlistStructured?.length > 0 && (
-                <li>{t("previewSetlist", { count: formValues.setlistStructured.length })}</li>
-              )}
               {formValues.packingChecklist?.length > 0 && (
                 <li>{t("previewChecklist", { count: formValues.packingChecklist.length })}</li>
               )}

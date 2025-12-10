@@ -3,9 +3,9 @@
 import { GigPack } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Music, Users, Shirt, Package, ParkingCircle, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, MapPin, Music, Users, Shirt, Package, ParkingCircle, DollarSign, Paperclip, ExternalLink } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { StructuredSetlist } from "@/components/structured-setlist";
 import { PackingChecklist } from "@/components/packing-checklist";
 
 interface MinimalLayoutProps {
@@ -163,27 +163,18 @@ export function MinimalLayout({ gigPack, openMaps, slug, locale = "en" }: Minima
             )}
 
             {/* Setlist */}
-            {(gigPack.setlist_structured || gigPack.setlist) && (
+            {gigPack.setlist && (
               <div className="space-y-4 pt-6 border-t" style={accentColor ? { borderColor: accentColor + '40' } : {}}>
                 <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-semibold" style={accentColor ? { color: accentColor } : {}}>
                   <Music className="h-4 w-4" />
                   <span>Setlist</span>
                 </div>
                 <div className="bg-muted/30 border rounded-lg p-6">
-                  {/* Structured setlist takes priority */}
-                  {gigPack.setlist_structured && gigPack.setlist_structured.length > 0 ? (
-                    <StructuredSetlist 
-                      sections={gigPack.setlist_structured} 
-                      variant="minimal"
-                      accentColor={accentColor || undefined}
-                    />
-                  ) : (
-                    /* Fallback to text setlist */
                   <div className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                      {gigPack.setlist?.split('\n').map((line, index) => (
+                    {gigPack.setlist.split('\n').map((line, index) => (
                       line.trim() ? (
                         <div key={index} className="flex gap-3 py-1.5 border-b border-dashed last:border-0">
-                            <span className="font-semibold min-w-[2rem]" style={accentColor ? { color: accentColor } : {}}>
+                          <span className="font-semibold min-w-[2rem]" style={accentColor ? { color: accentColor } : {}}>
                             {index + 1}.
                           </span>
                           <span className="flex-1">{line}</span>
@@ -193,7 +184,45 @@ export function MinimalLayout({ gigPack, openMaps, slug, locale = "en" }: Minima
                       )
                     ))}
                   </div>
-                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Materials */}
+            {gigPack.materials && gigPack.materials.length > 0 && (
+              <div className="space-y-4 pt-6 border-t" style={accentColor ? { borderColor: accentColor + '40' } : {}}>
+                <div className="flex items-center gap-2 text-sm uppercase tracking-wider font-semibold" style={accentColor ? { color: accentColor } : {}}>
+                  <Paperclip className="h-4 w-4" />
+                  <span>Materials</span>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {gigPack.materials.map((material) => (
+                    <div key={material.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="font-semibold text-sm flex-1">{material.label}</div>
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          {material.kind === "rehearsal" && "Rehearsal"}
+                          {material.kind === "performance" && "Performance"}
+                          {material.kind === "charts" && "Charts"}
+                          {material.kind === "reference" && "Reference"}
+                          {material.kind === "other" && "Other"}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate mb-3">
+                        {material.url}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => window.open(material.url, '_blank', 'noopener,noreferrer')}
+                        style={accentColor ? { borderColor: accentColor + '40', color: accentColor } : {}}
+                      >
+                        <ExternalLink className="mr-2 h-3 w-3" />
+                        Open
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

@@ -19,7 +19,6 @@ import {
   Clock3,
   X,
   Calendar as CalendarIcon,
-  MapPin,
   Users,
   Music,
   Package,
@@ -34,16 +33,29 @@ import {
   FileText,
   Sparkles,
   Loader2,
+  Shirt,
+  ParkingCircle,
+  Paperclip,
+  Link2,
 } from "lucide-react";
-import { GigPack, LineupMember, SetlistSection, PackingChecklistItem, GigPackTheme, PosterSkin } from "@/lib/types";
+import { GigPack, LineupMember, SetlistSection, PackingChecklistItem, GigPackTheme, PosterSkin, GigMaterial, GigMaterialKind, GigScheduleItem, Band } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateSlug } from "@/lib/utils";
 import { uploadImage, deleteImage, getPathFromUrl } from "@/lib/image-upload";
-import { SetlistEditor } from "@/components/setlist-editor";
 import { Calendar } from "@/components/ui/calendar";
 import { TimePicker } from "@/components/ui/time-picker";
 import { VenueAutocomplete } from "@/components/ui/venue-autocomplete";
+import { RoleSelect } from "@/components/ui/role-select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
@@ -78,7 +90,6 @@ export interface GigEditorPanelInitialValues {
   venueAddress?: string;
   venueMapsUrl?: string;
   lineup?: LineupMember[];
-  setlistStructured?: SetlistSection[];
   dressCode?: string;
   backlineNotes?: string;
   parkingNotes?: string;
@@ -270,7 +281,9 @@ export function GigEditorPanel({
 
   // Form state
   const [title, setTitle] = useState(gigPack?.title || "");
+  const [bandId, setBandId] = useState<string | null>(gigPack?.band_id || null);
   const [bandName, setBandName] = useState(gigPack?.band_name || "");
+  const [bands, setBands] = useState<Band[]>([]);
   const [date, setDate] = useState(gigPack?.date || "");
   const [callTime, setCallTime] = useState(gigPack?.call_time || "");
   const [onStageTime, setOnStageTime] = useState(gigPack?.on_stage_time || "");
@@ -280,10 +293,8 @@ export function GigEditorPanel({
   const [lineup, setLineup] = useState<LineupMember[]>(
     gigPack?.lineup || [{ role: "", name: "", notes: "" }]
   );
-  const setlist = gigPack?.setlist || "";
-  const [setlistStructured, setSetlistStructured] = useState<SetlistSection[]>(
-    gigPack?.setlist_structured || []
-  );
+  // Simplified setlist: plain text instead of structured JSON
+  const [setlistText, setSetlistText] = useState(gigPack?.setlist || "");
   const [dressCode, setDressCode] = useState(gigPack?.dress_code || "");
   const [backlineNotes, setBacklineNotes] = useState(gigPack?.backline_notes || "");
   const [parkingNotes, setParkingNotes] = useState(gigPack?.parking_notes || "");
@@ -306,6 +317,22 @@ export function GigEditorPanel({
     gigPack?.packing_checklist || []
   );
 
+  // Materials state
+  const [materials, setMaterials] = useState<GigMaterial[]>(
+    gigPack?.materials || []
+  );
+
+  // Schedule state
+  const [schedule, setSchedule] = useState<GigScheduleItem[]>(
+    gigPack?.schedule || []
+  );
+
+  // Info tab visibility flags
+  const [showDressCode, setShowDressCode] = useState(!!gigPack?.dress_code);
+  const [showBackline, setShowBackline] = useState(!!gigPack?.backline_notes);
+  const [showParking, setShowParking] = useState(!!gigPack?.parking_notes);
+  const [showInternalNotes, setShowInternalNotes] = useState(!!gigPack?.internal_notes);
+
   // Apply a template to the form (resets fields with template values)
   const applyTemplate = (template: GigPackTemplate) => {
     const values = applyTemplateToFormDefaults(template);
@@ -320,7 +347,8 @@ export function GigEditorPanel({
     setBacklineNotes(values.backlineNotes || "");
     setParkingNotes(values.parkingNotes || "");
     setPaymentNotes(values.paymentNotes || "");
-    setSetlistStructured(values.setlistStructured || []);
+    // Templates no longer use structured setlist - keep as empty text
+    setSetlistText("");
     setPackingChecklist(values.packingChecklist || []);
     
     // Apply date offset if present
@@ -351,7 +379,7 @@ export function GigEditorPanel({
     setVenueAddress("");
     setVenueMapsUrl("");
     setLineup([{ role: "", name: "", notes: "" }]);
-    setSetlistStructured([]);
+    setSetlistText("");
     setDressCode("");
     setBacklineNotes("");
     setParkingNotes("");
@@ -363,6 +391,14 @@ export function GigEditorPanel({
     setBandLogoUrl("");
     setHeroImageUrl("");
     setPackingChecklist([]);
+    setMaterials([]);
+    setSchedule([]);
+
+    // Reset Info tab visibility flags
+    setShowDressCode(false);
+    setShowBackline(false);
+    setShowParking(false);
+    setShowInternalNotes(false);
 
     toast({
       title: tTemplates("startedBlank"),
@@ -370,10 +406,35 @@ export function GigEditorPanel({
     });
   };
 
+  // Fetch user's bands on mount
+  useEffect(() => {
+    const fetchBands = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("bands")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setBands(data as Band[]);
+      }
+    };
+
+    fetchBands();
+  }, []);
+
   // Reset form when gigPack changes (switching between edit targets)
   useEffect(() => {
     if (gigPack) {
       setTitle(gigPack.title || "");
+      setBandId(gigPack.band_id || null);
       setBandName(gigPack.band_name || "");
       setDate(gigPack.date || "");
       setCallTime(gigPack.call_time || "");
@@ -382,7 +443,7 @@ export function GigEditorPanel({
       setVenueAddress(gigPack.venue_address || "");
       setVenueMapsUrl(gigPack.venue_maps_url || "");
       setLineup(gigPack.lineup || [{ role: "", name: "", notes: "" }]);
-      setSetlistStructured(gigPack.setlist_structured || []);
+      setSetlistText(gigPack.setlist || "");
       setDressCode(gigPack.dress_code || "");
       setBacklineNotes(gigPack.backline_notes || "");
       setParkingNotes(gigPack.parking_notes || "");
@@ -393,6 +454,14 @@ export function GigEditorPanel({
       setAccentColor(gigPack.accent_color || "");
       setPosterSkin((gigPack.poster_skin || "paper") as PosterSkin);
       setPackingChecklist(gigPack.packing_checklist || []);
+      setMaterials(gigPack.materials || []);
+      setSchedule(gigPack.schedule || []);
+
+      // Sync Info tab visibility flags
+      setShowDressCode(!!gigPack.dress_code);
+      setShowBackline(!!gigPack.backline_notes);
+      setShowParking(!!gigPack.parking_notes);
+      setShowInternalNotes(!!gigPack.internal_notes);
     }
   }, [gigPack]);
 
@@ -409,6 +478,28 @@ export function GigEditorPanel({
     const newLineup = [...lineup];
     newLineup[index] = { ...newLineup[index], [field]: value };
     setLineup(newLineup);
+  };
+
+  // Band selection handler - populate branding and lineup from band defaults
+  const handleBandSelect = (selectedBandId: string) => {
+    setBandId(selectedBandId);
+    
+    const selectedBand = bands.find((b) => b.id === selectedBandId);
+    if (selectedBand) {
+      // Update band name
+      setBandName(selectedBand.name);
+      
+      // Populate branding from band
+      if (selectedBand.band_logo_url) setBandLogoUrl(selectedBand.band_logo_url);
+      if (selectedBand.hero_image_url) setHeroImageUrl(selectedBand.hero_image_url);
+      if (selectedBand.accent_color) setAccentColor(selectedBand.accent_color);
+      if (selectedBand.poster_skin) setPosterSkin(selectedBand.poster_skin);
+      
+      // Populate lineup from band defaults
+      if (selectedBand.default_lineup && selectedBand.default_lineup.length > 0) {
+        setLineup(selectedBand.default_lineup);
+      }
+    }
   };
 
   // Image upload handlers
@@ -561,6 +652,7 @@ export function GigEditorPanel({
 
       const gigPackData = {
         title,
+        band_id: bandId || null,
         band_name: bandName || null,
         date: date || null,
         call_time: callTime || null,
@@ -569,8 +661,7 @@ export function GigEditorPanel({
         venue_address: venueAddress || null,
         venue_maps_url: venueMapsUrl || null,
         lineup: lineup.filter((m) => m.role),
-        setlist: setlist || null,
-        setlist_structured: setlistStructured.length > 0 ? setlistStructured : null,
+        setlist: setlistText || null,
         dress_code: dressCode || null,
         backline_notes: backlineNotes || null,
         parking_notes: parkingNotes || null,
@@ -584,6 +675,8 @@ export function GigEditorPanel({
         packing_checklist: packingChecklist.filter(item => item.label.trim()).length > 0 
           ? packingChecklist.filter(item => item.label.trim()) 
           : null,
+        materials: materials.length > 0 ? materials : null,
+        schedule: schedule.length > 0 ? schedule : null,
       };
 
       if (isEditing && gigPack) {
@@ -679,8 +772,9 @@ export function GigEditorPanel({
   const tabs: TabItem[] = [
     { id: "lineup", label: t("lineup"), icon: <Users className="h-4 w-4" /> },
     { id: "setlist", label: t("musicSetlist"), icon: <Music className="h-4 w-4" /> },
+    { id: "schedule", label: t("schedule.tabLabel"), icon: <Clock3 className="h-4 w-4" /> },
     { id: "info", label: t("logistics"), icon: <Package className="h-4 w-4" /> },
-    { id: "branding", label: t("branding"), icon: <ImageIcon className="h-4 w-4" /> },
+    { id: "materials", label: t("materials.tabLabel"), icon: <Paperclip className="h-4 w-4" /> },
   ];
 
   return (
@@ -869,15 +963,29 @@ export function GigEditorPanel({
                 displayClassName="text-2xl font-semibold leading-snug"
               />
 
-              {/* Band Name - Subtitle style */}
+              {/* Band Selector */}
               <div className="mt-1 mb-6">
-                <InlineInput
-                  value={bandName}
-                  onChange={(e) => setBandName(e.target.value)}
-                  placeholder={t("bandNamePlaceholder")}
+                <Select
+                  value={bandId || ""}
+                  onValueChange={handleBandSelect}
                   disabled={isLoading}
-                  displayClassName="text-base text-muted-foreground"
-                />
+                >
+                  <SelectTrigger className="w-full h-auto bg-transparent border-none shadow-none px-0 text-base text-muted-foreground hover:text-foreground">
+                    <SelectValue placeholder={t("selectBandPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bands.map((band) => (
+                      <SelectItem key={band.id} value={band.id}>
+                        {band.name}
+                      </SelectItem>
+                    ))}
+                    {bands.length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No bands yet
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* ============================================================
@@ -947,24 +1055,21 @@ export function GigEditorPanel({
                 </MetadataRow>
 
                 {/* Venue */}
-                <MetadataRow label={t("venueName")} className="items-start">
+                <MetadataRow label={t("venueName")}>
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <VenueAutocomplete
-                        value={venueName}
-                        onChange={setVenueName}
-                        onPlaceSelect={(place) => {
-                          if (place.address) setVenueAddress(place.address);
-                          if (place.mapsUrl) setVenueMapsUrl(place.mapsUrl);
-                        }}
-                        placeholder={t("venueNamePlaceholder")}
-                        disabled={isLoading}
-                      />
-                    </div>
+                    <VenueAutocomplete
+                      value={venueName}
+                      onChange={setVenueName}
+                      onPlaceSelect={(place) => {
+                        if (place.address) setVenueAddress(place.address);
+                        if (place.mapsUrl) setVenueMapsUrl(place.mapsUrl);
+                      }}
+                      placeholder={t("venueNamePlaceholder")}
+                      disabled={isLoading}
+                    />
                     {venueAddress && (
-                      <p className="text-xs text-muted-foreground ml-6">
-                        {venueAddress}
+                      <p className="text-xs text-muted-foreground">
+                        📍 {venueAddress}
                       </p>
                     )}
                   </div>
@@ -988,29 +1093,42 @@ export function GigEditorPanel({
                   <div className="space-y-3">
                     {lineup.map((member, index) => (
                       <div key={index} className="flex gap-2 items-start group">
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
-                          <InlineInput
-                            placeholder={t("rolePlaceholder")}
-                            value={member.role}
-                            onChange={(e) => updateLineupMember(index, "role", e.target.value)}
-                            disabled={isLoading}
-                            displayClassName="text-sm"
-                          />
-                          <InlineInput
-                            placeholder={t("namePlaceholder")}
-                            value={member.name || ""}
-                            onChange={(e) => updateLineupMember(index, "name", e.target.value)}
-                            disabled={isLoading}
-                            displayClassName="text-sm"
-                          />
-                          <InlineInput
-                            placeholder={t("notesPlaceholder")}
-                            value={member.notes || ""}
-                            onChange={(e) => updateLineupMember(index, "notes", e.target.value)}
-                            disabled={isLoading}
-                            displayClassName="text-sm text-muted-foreground"
-                          />
+                        {/* Changed layout: Name first (wider), then Role (dropdown), then Notes */}
+                        <div className="flex-1 flex flex-col md:flex-row gap-2">
+                          {/* Name - primary field, takes more space on desktop */}
+                          <div className="md:flex-[2]">
+                            <Input
+                              placeholder={t("namePlaceholder")}
+                              value={member.name || ""}
+                              onChange={(e) => updateLineupMember(index, "name", e.target.value)}
+                              disabled={isLoading}
+                              className="h-8 text-sm"
+                              autoFocus={index === lineup.length - 1 && !member.name}
+                            />
+                          </div>
+                          
+                          {/* Role - now a dropdown with predefined options + custom support */}
+                          <div className="md:flex-[1]">
+                            <RoleSelect
+                              value={member.role}
+                              onChange={(value) => updateLineupMember(index, "role", value)}
+                              disabled={isLoading}
+                            />
+                          </div>
+                          
+                          {/* Notes - optional, same as before */}
+                          <div className="md:flex-[1.5]">
+                            <Input
+                              placeholder={t("notesPlaceholder")}
+                              value={member.notes || ""}
+                              onChange={(e) => updateLineupMember(index, "notes", e.target.value)}
+                              disabled={isLoading}
+                              className="h-8 text-sm"
+                            />
+                          </div>
                         </div>
+                        
+                        {/* Remove button - only show if more than 1 member */}
                         {lineup.length > 1 && (
                           <Button
                             type="button"
@@ -1041,252 +1159,430 @@ export function GigEditorPanel({
 
                 {/* Setlist Tab */}
                 {activeTab === "setlist" && (
-                  <div>
-                    <SetlistEditor
-                      value={setlistStructured}
-                      onChange={setSetlistStructured}
+                  <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {t("musicSetlist")}
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {t("setlistTip")}
+                    </p>
+                    <Textarea
+                      value={setlistText}
+                      onChange={(e) => setSetlistText(e.target.value)}
+                      rows={16}
+                      placeholder={t("setlistPlaceholder")}
                       disabled={isLoading}
+                      className="text-base font-semibold"
                     />
+                  </div>
+                )}
+
+                {/* Schedule Tab */}
+                {activeTab === "schedule" && (
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {t("schedule.tabLabel")}
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        {t("schedule.description")}
+                      </p>
+                    </div>
+
+                    {/* Schedule Items */}
+                    <div className="space-y-3">
+                      {schedule
+                        .sort((a, b) => {
+                          // Sort by time, nulls at end
+                          if (!a.time && !b.time) return 0;
+                          if (!a.time) return 1;
+                          if (!b.time) return -1;
+                          return a.time.localeCompare(b.time);
+                        })
+                        .map((item, index) => (
+                          <div key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center p-3 rounded-md border bg-background">
+                            {/* Time Picker */}
+                            <div className="w-full sm:w-[140px]">
+                              <TimePicker
+                                value={item.time || ""}
+                                onChange={(newTime) => {
+                                  const newSchedule = [...schedule];
+                                  const itemIndex = schedule.findIndex(i => i.id === item.id);
+                                  if (itemIndex !== -1) {
+                                    newSchedule[itemIndex] = { ...item, time: newTime };
+                                    setSchedule(newSchedule);
+                                  }
+                                }}
+                                disabled={isLoading}
+                              />
+                            </div>
+                            
+                            {/* Label Input */}
+                            <div className="flex-1">
+                              <Input
+                                value={item.label}
+                                onChange={(e) => {
+                                  const newSchedule = [...schedule];
+                                  const itemIndex = schedule.findIndex(i => i.id === item.id);
+                                  if (itemIndex !== -1) {
+                                    newSchedule[itemIndex] = { ...item, label: e.target.value };
+                                    setSchedule(newSchedule);
+                                  }
+                                }}
+                                placeholder={t("schedule.labelPlaceholder")}
+                                disabled={isLoading}
+                                className="h-8"
+                              />
+                            </div>
+                            
+                            {/* Remove Button */}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSchedule(schedule.filter(i => i.id !== item.id));
+                              }}
+                              disabled={isLoading}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Add Schedule Item Button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newItem: GigScheduleItem = {
+                          id: crypto.randomUUID(),
+                          time: null,
+                          label: "",
+                        };
+                        setSchedule([...schedule, newItem]);
+                      }}
+                      disabled={isLoading}
+                      className="w-full"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t("schedule.addButton")}
+                    </Button>
                   </div>
                 )}
 
                 {/* Info/Logistics Tab */}
                 {activeTab === "info" && (
                   <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("dressCode")}
-                      </label>
-                      <InlineInput
-                        value={dressCode}
-                        onChange={(e) => setDressCode(e.target.value)}
-                        placeholder={t("dressCodePlaceholder")}
-                        disabled={isLoading}
-                        displayClassName="text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("backlineNotes")}
-                      </label>
-                      <InlineTextarea
-                        value={backlineNotes}
-                        onChange={(e) => setBacklineNotes(e.target.value)}
-                        placeholder={t("backlineNotesPlaceholder")}
-                        rows={2}
-                        disabled={isLoading}
-                        className="text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("parkingNotes")}
-                      </label>
-                      <InlineTextarea
-                        value={parkingNotes}
-                        onChange={(e) => setParkingNotes(e.target.value)}
-                        placeholder={t("parkingNotesPlaceholder")}
-                        rows={2}
-                        disabled={isLoading}
-                        className="text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("paymentNotes")}
-                      </label>
-                      <InlineTextarea
-                        value={paymentNotes}
-                        onChange={(e) => setPaymentNotes(e.target.value)}
-                        placeholder={t("paymentNotesPlaceholder")}
-                        rows={2}
-                        disabled={isLoading}
-                        className="text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("internalNotes")}
-                      </label>
-                      <InlineTextarea
-                        value={internalNotes}
-                        onChange={(e) => setInternalNotes(e.target.value)}
-                        placeholder={t("internalNotesPlaceholder")}
-                        rows={3}
-                        disabled={isLoading}
-                        className="text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t("internalNotesDescription")}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Branding Tab */}
-                {activeTab === "branding" && (
-                  <div className="space-y-6">
-                    <p className="text-sm text-muted-foreground">
-                      {t("brandingDescription")}
-                    </p>
-
-                    {/* Band Logo */}
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("bandLogo")}
-                      </label>
-                      {bandLogoUrl ? (
-                        <div className="flex items-center gap-4">
-                          <div className="relative w-20 h-20 border border-border rounded-lg overflow-hidden bg-muted">
-                            <img
-                              src={bandLogoUrl}
-                              alt="Band logo"
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => document.getElementById("logo-upload-panel")?.click()}
-                              disabled={isLoading || isUploadingLogo}
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              {isUploadingLogo ? t("uploadingImage") : t("changeImage")}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleRemoveLogo}
-                              disabled={isLoading || isUploadingLogo}
-                              className="text-destructive hover:text-destructive/90"
-                            >
-                              {t("removeImage")}
-                            </Button>
-                          </div>
+                    {/* Dress Code */}
+                    {showDressCode && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                            <Shirt className="h-4 w-4" />
+                            {t("dressCode")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDressCode("");
+                              setShowDressCode(false);
+                            }}
+                            disabled={isLoading}
+                            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            {t("materials.remove")}
+                          </button>
                         </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => document.getElementById("logo-upload-panel")?.click()}
-                          disabled={isLoading || isUploadingLogo}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          {isUploadingLogo ? t("uploadingImage") : t("uploadImage")}
-                        </Button>
-                      )}
-                      <input
-                        id="logo-upload-panel"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleLogoUpload}
-                        disabled={isLoading || isUploadingLogo}
-                      />
-                    </div>
-
-                    {/* Hero Image */}
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("heroImage")}
-                      </label>
-                      {heroImageUrl ? (
-                        <div className="flex items-start gap-4">
-                          <div className="relative w-40 h-24 border border-border rounded-lg overflow-hidden bg-muted">
-                            <img
-                              src={heroImageUrl}
-                              alt="Hero image"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => document.getElementById("hero-upload-panel")?.click()}
-                              disabled={isLoading || isUploadingHero}
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              {isUploadingHero ? t("uploadingImage") : t("changeImage")}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleRemoveHero}
-                              disabled={isLoading || isUploadingHero}
-                              className="text-destructive hover:text-destructive/90"
-                            >
-                              {t("removeImage")}
-                            </Button>
-                          </div>
+                        <div className="flex h-8 w-full items-center rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring">
+                          <input
+                            type="text"
+                            value={dressCode}
+                            onChange={(e) => setDressCode(e.target.value)}
+                            placeholder={t("dressCodePlaceholder")}
+                            disabled={isLoading}
+                            className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+                          />
                         </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => document.getElementById("hero-upload-panel")?.click()}
-                          disabled={isLoading || isUploadingHero}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          {isUploadingHero ? t("uploadingImage") : t("uploadImage")}
-                        </Button>
-                      )}
-                      <input
-                        id="hero-upload-panel"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleHeroUpload}
-                        disabled={isLoading || isUploadingHero}
-                      />
-                    </div>
+                      </div>
+                    )}
 
-                    {/* Accent Color */}
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {t("accentColor")}
-                      </label>
-                      <div className="flex gap-3 items-center flex-wrap">
-                        <div className="flex gap-2">
-                          {["#F97316", "#EF4444", "#8B5CF6", "#10B981", "#3B82F6", "#F59E0B"].map((color) => (
-                            <button
-                              key={color}
-                              type="button"
-                              onClick={() => setAccentColor(color)}
-                              className="w-7 h-7 rounded-full border-2 transition-all hover:scale-110"
-                              style={{
-                                backgroundColor: color,
-                                borderColor: accentColor === color ? "hsl(var(--foreground))" : "transparent",
-                              }}
-                              title={color}
-                            />
-                          ))}
+                    {/* Gear / Backline */}
+                    {showBackline && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                            <Package className="h-4 w-4" />
+                            {t("backlineNotes")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBacklineNotes("");
+                              setShowBackline(false);
+                            }}
+                            disabled={isLoading}
+                            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            {t("materials.remove")}
+                          </button>
                         </div>
-                        <InlineInput
-                          value={accentColor}
-                          onChange={(e) => setAccentColor(e.target.value)}
-                          placeholder="#F97316"
-                          className="max-w-[100px]"
+                        <Textarea
+                          value={backlineNotes}
+                          onChange={(e) => setBacklineNotes(e.target.value)}
+                          placeholder={t("backlineNotesPlaceholder")}
+                          rows={3}
                           disabled={isLoading}
-                          displayClassName="text-sm font-mono"
+                          className="resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring"
                         />
                       </div>
+                    )}
+
+                    {/* Parking & Load-in */}
+                    {showParking && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                            <ParkingCircle className="h-4 w-4" />
+                            {t("parkingNotes")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setParkingNotes("");
+                              setShowParking(false);
+                            }}
+                            disabled={isLoading}
+                            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            {t("materials.remove")}
+                          </button>
+                        </div>
+                        <Textarea
+                          value={parkingNotes}
+                          onChange={(e) => setParkingNotes(e.target.value)}
+                          placeholder={t("parkingNotesPlaceholder")}
+                          rows={3}
+                          disabled={isLoading}
+                          className="resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+                    )}
+
+                    {/* Private Notes */}
+                    {showInternalNotes && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                            <FileText className="h-4 w-4" />
+                            {t("internalNotes")}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInternalNotes("");
+                              setShowInternalNotes(false);
+                            }}
+                            disabled={isLoading}
+                            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            {t("materials.remove")}
+                          </button>
+                        </div>
+                        <Textarea
+                          value={internalNotes}
+                          onChange={(e) => setInternalNotes(e.target.value)}
+                          placeholder={t("internalNotesPlaceholder")}
+                          rows={4}
+                          disabled={isLoading}
+                          className="resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-1 focus:ring-ring"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t("internalNotesDescription")}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Add buttons for hidden fields */}
+                    <div className="space-y-2">
+                      {!showDressCode && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDressCode(true)}
+                          disabled={isLoading}
+                          className="w-full justify-start text-xs"
+                        >
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
+                          <Shirt className="mr-1.5 h-3.5 w-3.5" />
+                          {t("dressCode")}
+                        </Button>
+                      )}
+                      {!showBackline && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowBackline(true)}
+                          disabled={isLoading}
+                          className="w-full justify-start text-xs"
+                        >
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
+                          <Package className="mr-1.5 h-3.5 w-3.5" />
+                          {t("backlineNotes")}
+                        </Button>
+                      )}
+                      {!showParking && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowParking(true)}
+                          disabled={isLoading}
+                          className="w-full justify-start text-xs"
+                        >
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
+                          <ParkingCircle className="mr-1.5 h-3.5 w-3.5" />
+                          {t("parkingNotes")}
+                        </Button>
+                      )}
+                      {!showInternalNotes && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowInternalNotes(true)}
+                          disabled={isLoading}
+                          className="w-full justify-start text-xs"
+                        >
+                          <Plus className="mr-1.5 h-3.5 w-3.5" />
+                          <FileText className="mr-1.5 h-3.5 w-3.5" />
+                          {t("internalNotes")}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
+
+                {/* Materials Tab */}
+                {activeTab === "materials" && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      {t("materials.description")}
+                    </p>
+
+                    {/* Materials List */}
+                    <div className="space-y-3">
+                      {materials.map((material, index) => (
+                        <div key={material.id} className="space-y-2 rounded-md border bg-background p-3">
+                          <div className="flex gap-2">
+                            {/* Label Input */}
+                            <Input
+                              className="flex-1"
+                              value={material.label}
+                              onChange={(e) => {
+                                const newMaterials = [...materials];
+                                newMaterials[index] = { ...material, label: e.target.value };
+                                setMaterials(newMaterials);
+                              }}
+                              placeholder={t("materials.labelPlaceholder")}
+                              disabled={isLoading}
+                            />
+                            
+                            {/* Kind Select */}
+                            <Select
+                              value={material.kind}
+                              onValueChange={(value: GigMaterialKind) => {
+                                const newMaterials = [...materials];
+                                newMaterials[index] = { ...material, kind: value };
+                                setMaterials(newMaterials);
+                              }}
+                              disabled={isLoading}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="rehearsal">{t("materials.type.rehearsal")}</SelectItem>
+                                <SelectItem value="performance">{t("materials.type.performance")}</SelectItem>
+                                <SelectItem value="charts">{t("materials.type.charts")}</SelectItem>
+                                <SelectItem value="reference">{t("materials.type.reference")}</SelectItem>
+                                <SelectItem value="other">{t("materials.type.other")}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          {/* URL Input */}
+                          <Input
+                            value={material.url}
+                            onChange={(e) => {
+                              const newMaterials = [...materials];
+                              newMaterials[index] = { ...material, url: e.target.value };
+                              setMaterials(newMaterials);
+                            }}
+                            placeholder={t("materials.urlPlaceholder")}
+                            type="url"
+                            disabled={isLoading}
+                          />
+                          
+                          {/* Actions */}
+                          <div className="flex justify-between items-center text-xs">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (material.url) {
+                                  window.open(material.url, '_blank', 'noopener,noreferrer');
+                                }
+                              }}
+                              disabled={!material.url || isLoading}
+                              className="text-muted-foreground hover:text-foreground disabled:opacity-50 flex items-center gap-1"
+                            >
+                              <Link2 className="h-3 w-3" />
+                              {t("materials.open")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newMaterials = materials.filter((_, i) => i !== index);
+                                setMaterials(newMaterials);
+                              }}
+                              disabled={isLoading}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              {t("materials.remove")}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Add Material Button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newMaterial: GigMaterial = {
+                          id: crypto.randomUUID(),
+                          label: "",
+                          url: "",
+                          kind: "other",
+                        };
+                        setMaterials([...materials, newMaterial]);
+                      }}
+                      disabled={isLoading}
+                      className="mt-2"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t("materials.addButton")}
+                    </Button>
+                  </div>
+                )}
+
               </div>
             </div>
 
@@ -1351,7 +1647,6 @@ export function GigEditorPanel({
           backlineNotes,
           parkingNotes,
           paymentNotes,
-          setlistStructured,
           packingChecklist,
         }}
         onSuccess={onTemplateSaved}

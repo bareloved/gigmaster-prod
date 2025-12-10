@@ -76,8 +76,6 @@ export async function POST(request: Request) {
     // Let URLSearchParams handle encoding; avoid double-encoding.
     const json = JSON.stringify(payload);
     url.searchParams.set("data", json);
-    console.log("[API] setlistData", payload);
-    console.log("[API] print URL", url.toString());
 
     const filename = buildSetlistFilename(payload.title, payload.date);
 

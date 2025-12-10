@@ -35,18 +35,6 @@ export function SetlistPreview({
   printUrl,
   variant = "app",
 }: SetlistPreviewProps) {
-  console.log("[SetlistPreview] props", {
-    title,
-    location,
-    date,
-    linesLength: lines?.length,
-    variant,
-    direction,
-    align,
-    locale,
-    printUrl,
-  });
-
   const numbered = options?.numbered;
   const isPrint = variant === "print";
   const isRTL = locale === "he";

@@ -15,8 +15,10 @@ export default async function LocaleLayout({
   params,
 }: {
   children: React.ReactNode;
+  // Next.js 15/16 requires params to be a Promise
   params: Promise<{ locale: string }>;
 }) {
+  // Must await params in Next.js 15/16
   const { locale } = await params;
   
   // Ensure that the incoming `locale` is valid
@@ -32,7 +34,8 @@ export default async function LocaleLayout({
   return (
     <>
       <LocaleHtmlAttributes locale={locale} />
-      <NextIntlClientProvider messages={messages}>
+      {/* CRITICAL FIX: Added locale prop so client components can use useTranslations */}
+      <NextIntlClientProvider locale={locale} messages={messages}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

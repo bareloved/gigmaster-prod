@@ -30,9 +30,7 @@ export default async function SetlistPrintPage({
 }) {
   const { locale } = await params;
   const sp = await searchParams;
-  console.log("[PRINT] raw data", sp?.data);
   const setlist = safeParseSetlist(sp?.data);
-  console.log("[PRINT] parsed setlist", setlist);
 
   const isRTL = locale === "he";
   const direction = isRTL ? "rtl" : "ltr";

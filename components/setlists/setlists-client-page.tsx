@@ -169,9 +169,6 @@ export function SetlistsClientPage() {
             align={textAlign as "left" | "right"}
             printUrl={previewPrintUrl}
             variant="app"
-            emptyPreviewMessage={t("preview_placeholder")}
-            emptyListMessage={t("preview_list_placeholder")}
-            fallbackTitle={t("fallback_title")}
           />
         </div>
 

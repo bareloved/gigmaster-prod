@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 
-export default async function GigPacksLayout({
+export default async function BandsLayout({
   children,
   params,
 }: {

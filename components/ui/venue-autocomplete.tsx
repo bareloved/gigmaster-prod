@@ -31,113 +31,146 @@ function VenueAutocompleteInner({
   className,
 }: VenueAutocompleteProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const autocompleteRef = React.useRef<any>(null)
+  const inputValueRef = React.useRef(value || "")
   const [isReady, setIsReady] = React.useState(false)
   const [inputValue, setInputValue] = React.useState(value || "")
   const places = useMapsLibrary("places")
 
-  // Sync input value with prop
+  // Store callbacks in refs so they're always current
+  const onChangeRef = React.useRef(onChange)
+  const onPlaceSelectRef = React.useRef(onPlaceSelect)
+
   React.useEffect(() => {
-    setInputValue(value || "")
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  React.useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect
+  }, [onPlaceSelect])
+
+  // Sync input value with prop and update Google Places input
+  React.useEffect(() => {
+    const newValue = value || ""
+    setInputValue(newValue)
+    inputValueRef.current = newValue
+    
+    // Also update the Google Places autocomplete input
+    if (autocompleteRef.current) {
+      const input = autocompleteRef.current.querySelector("input")
+      if (input && input.value !== newValue) {
+        input.value = newValue
+      }
+    }
   }, [value])
 
-  // Function to get computed CSS variable values
-  const getCSSVar = React.useCallback((varName: string) => {
-    const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
-    return value ? `hsl(${value})` : ""
-  }, [])
-
-  // Function to style the input inside shadow DOM
   const styleAutocompleteInput = React.useCallback((autocomplete: Element) => {
     const shadowRoot = (autocomplete as HTMLElement & { shadowRoot: ShadowRoot | null }).shadowRoot
     if (shadowRoot) {
-      const input = shadowRoot.querySelector("input")
-      if (input) {
-        const bgColor = getCSSVar("--background")
-        const fgColor = getCSSVar("--foreground")
-        const borderColor = getCSSVar("--input")
-        const mutedColor = getCSSVar("--muted-foreground")
-        const ringColor = getCSSVar("--ring")
-
-        input.style.cssText = `
-          height: 32px !important;
+      // Remove previous styles to allow theme switching
+      const existingStyles = shadowRoot.querySelectorAll("[data-theme-style]")
+      existingStyles.forEach(s => s.remove())
+      
+      // Detect dark mode and set appropriate colors
+      const isDark = document.documentElement.classList.contains("dark")
+      const textColor = isDark ? "#fafafa" : "#0a0a0a"
+      const placeholderColor = isDark ? "#a1a1aa" : "#71717a"
+      
+      // Inject styles with computed colors (CSS vars don't work in shadow DOM)
+      const styleEl = document.createElement("style")
+      styleEl.setAttribute("data-theme-style", "true")
+      styleEl.textContent = `
+        input {
+          height: 100% !important;
           width: 100% !important;
-          border-radius: 6px !important;
-          border: 1px solid ${borderColor} !important;
-          background: ${bgColor} !important;
-          color: ${fgColor} !important;
-          padding: 0.25rem 0.5rem !important;
-          padding-right: 40px !important;
+          border-radius: 0 !important;
+          border: none !important;
+          background: transparent !important;
+          padding: 0 !important;
+          margin: 0 !important;
           font-size: 14px !important;
           outline: none !important;
-          box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
-          transition: background-color 0.2s, border-color 0.2s !important;
-        `
-        
-        // Remove any existing event listeners to prevent duplicates
-        const focusHandler = () => {
-          input.style.borderColor = ringColor || borderColor
+          box-shadow: none !important;
+          color: ${textColor} !important;
+          caret-color: ${textColor} !important;
+          -webkit-text-fill-color: ${textColor} !important;
         }
-        const blurHandler = () => {
-          input.style.borderColor = borderColor
+        input::placeholder,
+        input::-webkit-input-placeholder,
+        input::-moz-placeholder {
+          color: ${placeholderColor} !important;
+          opacity: 1 !important;
         }
-        
-        input.removeEventListener('focus', focusHandler)
-        input.removeEventListener('blur', blurHandler)
-        input.addEventListener('focus', focusHandler)
-        input.addEventListener('blur', blurHandler)
-        
-        // Check if we already added placeholder styles
-        if (!shadowRoot.querySelector("[data-placeholder-style]")) {
-          const styleEl = document.createElement("style")
-          styleEl.setAttribute("data-placeholder-style", "true")
-          styleEl.textContent = `input::placeholder { color: ${mutedColor} !important; }`
-          shadowRoot.appendChild(styleEl)
-        }
-        
-        return true
-      }
+      `
+      shadowRoot.insertBefore(styleEl, shadowRoot.firstChild)
+      
+      return true
     }
     return false
-  }, [getCSSVar])
+  }, [])
 
   // Initialize the autocomplete when places library is ready
   React.useEffect(() => {
     if (!places || !containerRef.current) return
 
-    // Create the new Place Autocomplete element
+    // Create the Place Autocomplete element
     // @ts-expect-error - PlaceAutocompleteElement exists in newer Places API
     const autocomplete = new places.PlaceAutocompleteElement({})
+    autocompleteRef.current = autocomplete
 
-    // Listen for place selection
-    autocomplete.addEventListener("gmp-placeselect", async (event: Event) => {
-      const placeEvent = event as google.maps.places.PlaceAutocompletePlaceSelectEvent
-      const place = placeEvent.place
+    // Listen for place selection (gmp-select event)
+    const handlePlaceSelect = async (event: any) => {
+      try {
+        const placePrediction = event.placePrediction
+        if (!placePrediction) return
 
-      // Fetch additional details
-      await place.fetchFields({ 
-        fields: ["displayName", "formattedAddress", "googleMapsURI"] 
-      })
+        const place = placePrediction.toPlace()
+        
+        await place.fetchFields({ 
+          fields: ["displayName", "formattedAddress", "googleMapsURI"] 
+        })
 
-      const name = place.displayName || ""
-      const address = place.formattedAddress || ""
-      const mapsUrl = place.googleMapsURI || ""
+        const name = place.displayName || ""
+        const address = place.formattedAddress || ""
+        const mapsUrl = place.googleMapsURI || ""
 
-      setInputValue(name)
-      onChange?.(name)
-      onPlaceSelect?.({ name, address, mapsUrl })
-    })
+        setInputValue(name)
+        inputValueRef.current = name
+        onChangeRef.current?.(name)
+        onPlaceSelectRef.current?.({ name, address, mapsUrl })
+      } catch (err) {
+        // Silently handle errors
+      }
+    }
+
+    autocomplete.addEventListener("gmp-select", handlePlaceSelect)
 
     // Clear and append
     containerRef.current.innerHTML = ""
     containerRef.current.appendChild(autocomplete)
     
-    // Set placeholder on the light DOM input if available
-    const input = autocomplete.querySelector("input")
-    if (input) {
-      input.placeholder = placeholder
-    }
+    // Set placeholder and initial value on the input
+    const initTimer = setTimeout(() => {
+      const input = autocomplete.querySelector("input")
+      if (input) {
+        input.placeholder = placeholder
+        const currentVal = inputValueRef.current
+        if (currentVal) {
+          input.value = currentVal
+        }
+        
+        // Listen for input changes to keep our state in sync
+        input.addEventListener("input", (e: Event) => {
+          const target = e.target as HTMLInputElement
+          const newVal = target.value
+          setInputValue(newVal)
+          inputValueRef.current = newVal
+          onChangeRef.current?.(newVal)
+        })
+      }
+    }, 0)
 
-    // Apply styles to shadow DOM input - try multiple times as it may take time to render
+    // Apply styles to shadow DOM input
     styleAutocompleteInput(autocomplete)
     const timers = [
       setTimeout(() => styleAutocompleteInput(autocomplete), 50),
@@ -148,12 +181,16 @@ function VenueAutocompleteInner({
     setIsReady(true)
 
     return () => {
+      clearTimeout(initTimer)
       timers.forEach(clearTimeout)
+      autocomplete.removeEventListener("gmp-select", handlePlaceSelect)
+      autocompleteRef.current = null
       if (containerRef.current) {
         containerRef.current.innerHTML = ""
       }
     }
-  }, [places, onChange, onPlaceSelect, placeholder, styleAutocompleteInput])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places, styleAutocompleteInput])
 
   // Re-apply styles when theme changes (listen for class changes on html element)
   React.useEffect(() => {
@@ -171,6 +208,16 @@ function VenueAutocompleteInner({
     return () => observer.disconnect()
   }, [isReady, styleAutocompleteInput])
 
+  // Ensure input value is set after initialization
+  React.useEffect(() => {
+    if (!isReady || !autocompleteRef.current || !inputValue) return
+
+    const input = autocompleteRef.current.querySelector("input")
+    if (input && input.value !== inputValue) {
+      input.value = inputValue
+    }
+  }, [isReady, inputValue])
+
   if (!places) {
     return (
       <div className={cn(
@@ -184,20 +231,18 @@ function VenueAutocompleteInner({
   }
 
   return (
-    <div className="relative">
-      <div 
-        ref={containerRef}
-        className={cn(
-          "[&_input]:pr-10",
-          disabled && "pointer-events-none opacity-50",
-          className
-        )}
-      />
-      {isReady && (
-        <div className="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2">
-          <MapPin className="h-4 w-4 text-green-500 opacity-70" />
-        </div>
+    <div
+      className={cn(
+        "flex h-8 w-full items-center rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring",
+        disabled && "pointer-events-none opacity-50",
+        className
       )}
+    >
+      <div
+        ref={containerRef}
+        className="flex-1 [&_gmp-place-autocomplete]:bg-transparent [&_gmp-place-autocomplete]:border-0 [&_gmp-place-autocomplete]:shadow-none [&_gmp-place-autocomplete]:p-0 [&_gmp-place-autocomplete]:m-0 [&_input]:bg-transparent [&_input]:border-0 [&_input]:outline-none [&_input]:shadow-none [&_input]:p-0 [&_input]:m-0"
+      />
+      <MapPin className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
     </div>
   )
 }

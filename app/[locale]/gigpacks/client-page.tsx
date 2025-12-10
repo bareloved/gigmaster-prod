@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import {
+  PaperTextureHeader,
+  getPaperFallbackColors,
+} from "@/components/gigpacks/paper-texture-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -54,6 +60,8 @@ export type GigPackListItem = {
   updated_at: string;
   created_at: string;
   gig_mood: string | null;
+  hero_image_url: string | null;
+  band_logo_url: string | null;
 };
 
 export type GigPackSheetState =
@@ -131,27 +139,34 @@ type GigGroup = {
   gigs: GigPackListItem[];
 };
 
+const sortPastGigs = (gigs: GigPackListItem[]): GigPackListItem[] => {
+  return gigs.filter((g) => isPast(g.date)).sort((a, b) => {
+    const dateA = parseDate(a.date)?.getTime() || 0;
+    const dateB = parseDate(b.date)?.getTime() || 0;
+    return dateB - dateA;
+  });
+};
+
+const sortUpcomingGigs = (gigs: GigPackListItem[]): GigPackListItem[] => {
+  return gigs.filter((g) => !isPast(g.date)).sort((a, b) => {
+    const dateA = parseDate(a.date)?.getTime() || 0;
+    const dateB = parseDate(b.date)?.getTime() || 0;
+    // Sort TBD dates to the end
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateA - dateB;
+  });
+};
+
 const groupGigsByTime = (gigs: GigPackListItem[], filter: ViewFilter): GigGroup[] => {
   if (filter === "past") {
-    const pastGigs = gigs.filter((g) => isPast(g.date)).sort((a, b) => {
-        const dateA = parseDate(a.date)?.getTime() || 0;
-        const dateB = parseDate(b.date)?.getTime() || 0;
-        return dateB - dateA;
-    });
+    const pastGigs = sortPastGigs(gigs);
     if (pastGigs.length === 0) return [];
     return [{ label: "Past Gigs", gigs: pastGigs }];
   }
 
-  const upcomingGigs = gigs.filter((g) => !isPast(g.date)).sort((a, b) => {
-      const dateA = parseDate(a.date)?.getTime() || 0;
-      const dateB = parseDate(b.date)?.getTime() || 0;
-      // Sort TBD dates to the end
-      if (!dateA && !dateB) return 0;
-      if (!dateA) return 1;
-      if (!dateB) return -1;
-      return dateA - dateB;
-  });
-
+  const upcomingGigs = sortUpcomingGigs(gigs);
   const thisWeek = upcomingGigs.filter((g) => isThisWeek(g.date));
   const laterThisMonth = upcomingGigs.filter((g) => !isThisWeek(g.date) && isThisMonth(g.date));
   const otherUpcoming = upcomingGigs.filter((g) => !isThisMonth(g.date));
@@ -162,20 +177,16 @@ const groupGigsByTime = (gigs: GigPackListItem[], filter: ViewFilter): GigGroup[
   if (otherUpcoming.length > 0) groups.push({ label: "Other Upcoming", gigs: otherUpcoming });
 
   if (filter === "all") {
-    const pastGigs = gigs.filter((g) => isPast(g.date)).sort((a, b) => {
-        const dateA = parseDate(a.date)?.getTime() || 0;
-        const dateB = parseDate(b.date)?.getTime() || 0;
-        return dateB - dateA;
-    });
+    const pastGigs = sortPastGigs(gigs);
     if (pastGigs.length > 0) groups.push({ label: "Past", gigs: pastGigs });
   }
   
-  // Handle empty groups if we have gigs but they didn't fit categories (e.g. only TBDs in upcoming)
+  // Handle unscheduled gigs
   const groupedIds = new Set(groups.flatMap(g => g.gigs.map(gig => gig.id)));
   const leftovers = upcomingGigs.filter(g => !groupedIds.has(g.id));
   
   if (leftovers.length > 0) {
-      groups.push({ label: "Upcoming (Unscheduled)", gigs: leftovers });
+    groups.push({ label: "Upcoming (Unscheduled)", gigs: leftovers });
   }
 
   return groups;
@@ -184,6 +195,100 @@ const groupGigsByTime = (gigs: GigPackListItem[], filter: ViewFilter): GigGroup[
 // =============================================================================
 // COMPONENT PARTS
 // =============================================================================
+
+/**
+ * Component to display band image with fallback
+ * - Board view (card): prefers hero_image_url (wide/promotional images)
+ * - List/Compact views (thumbnail/compact): prefers band_logo_url (square logos)
+ */
+const GigBandImage = ({
+  gig,
+  variant = "card",
+}: {
+  gig: GigPackListItem;
+  variant?: "card" | "thumbnail" | "compact";
+}) => {
+  // Board view uses hero image (wide), List/Compact use logo (square)
+  const imageUrl = variant === "card"
+    ? gig.hero_image_url || gig.band_logo_url
+    : gig.band_logo_url || gig.hero_image_url;
+  
+  // Generate a consistent gradient based on band name
+  const getBandGradient = (bandName: string | null) => {
+    if (!bandName) return "from-slate-300 to-slate-400 dark:from-slate-700 dark:to-slate-800";
+    const colors = [
+      "from-blue-400 to-indigo-500",
+      "from-purple-400 to-pink-500",
+      "from-green-400 to-teal-500",
+      "from-orange-400 to-red-500",
+      "from-cyan-400 to-blue-500",
+      "from-fuchsia-400 to-purple-500",
+    ];
+    const hash = bandName.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  };
+
+  const gradient = getBandGradient(gig.band_name);
+
+  // Dimensions based on variant
+  const dimensions = {
+    card: { width: 400, height: 240, className: "h-60 w-full" },
+    thumbnail: { width: 80, height: 80, className: "h-16 w-16" },
+    compact: { width: 48, height: 48, className: "h-10 w-10" },
+  }[variant];
+
+  if (imageUrl) {
+    return (
+      <div className={cn("relative overflow-hidden bg-muted", dimensions.className, variant === "card" ? "rounded-t-lg" : "rounded-md")}>
+        <Image
+          src={imageUrl}
+          alt={gig.band_name || gig.title}
+          fill
+          sizes={variant === "card" ? "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" : "80px"}
+          className={cn(
+            "object-cover",
+            variant === "card" && "opacity-75"
+          )}
+          loading="lazy"
+          quality={60}
+        />
+        {/* Gradient overlay for text readability - Spotify style */}
+        {variant === "card" && (
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent from-30% via-black/30 to-black/60" />
+        )}
+      </div>
+    );
+  }
+
+  // Fallback: paper texture with gentle color variations for all variants
+  const initials = gig.band_name
+    ?.split(" ")
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "??";
+
+  const paperColors = getPaperFallbackColors({
+    id: gig.id,
+    gig_mood: gig.gig_mood,
+    title: gig.title,
+  });
+
+  // Board view (card): Use paper texture with gradient
+  if (variant === "card") {
+    return <PaperTextureHeader initials={initials} colors={paperColors} showGradient={true} />;
+  }
+
+  // List/Compact views: Use paper texture WITHOUT gradient
+  return (
+    <PaperTextureHeader 
+      initials={initials} 
+      colors={paperColors} 
+      size={variant} 
+      showGradient={false}
+    />
+  );
+};
 
 const VibeTag = ({ vibe, iconOnly = false }: { vibe: string | null; iconOnly?: boolean }) => {
   if (!vibe) return null;
@@ -319,27 +424,27 @@ const NextUpStrip = ({ gigs }: { gigs: GigPackListItem[] }) => {
     <div className={cn(
       "flex items-center gap-3 rounded-xl px-4 py-3 border",
       isTodayGig
-        ? "bg-primary/10 border-primary/30"
+        ? "bg-orange-600/10 border-orange-600/30 dark:bg-orange-500/10 dark:border-orange-500/30"
         : "bg-accent/10 border-accent/30"
     )}>
       <div className={cn(
         "flex items-center justify-center w-8 h-8 rounded-full",
-        isTodayGig ? "bg-primary/20" : "bg-accent/20"
+        isTodayGig ? "bg-orange-600/20 dark:bg-orange-500/20" : "bg-accent/20"
       )}>
         {isTodayGig ? (
-          <Zap className={cn("h-4 w-4", isTodayGig ? "text-primary" : "text-accent")} />
+          <Zap className={cn("h-4 w-4", isTodayGig ? "text-orange-700 dark:text-orange-300" : "text-slate-700 dark:text-slate-300")} />
         ) : (
-          <Calendar className="h-4 w-4 text-accent" />
+          <Calendar className="h-4 w-4 text-slate-700 dark:text-slate-300" />
         )}
       </div>
       <div className="flex-1 min-w-0">
         <span className={cn(
           "text-xs font-bold uppercase tracking-wider",
-          isTodayGig ? "text-primary" : "text-accent"
+          isTodayGig ? "text-orange-700 dark:text-orange-300" : "text-slate-700 dark:text-slate-300"
         )}>
           {isTodayGig ? "Today" : "Next up"}
         </span>
-        <p className="text-sm font-medium truncate">
+        <p className="text-sm font-medium truncate text-slate-800 dark:text-slate-200">
           {nextGig.title}
           {nextGig.call_time && ` – Call ${nextGig.call_time}`}
           {nextGig.venue_name && ` at ${nextGig.venue_name}`}
@@ -419,30 +524,33 @@ const BoardView = ({ groups, onEdit, onShare, onDelete, onClick, viewFilter, onC
                     >
                       {/* Today indicator stripe */}
                       {isTodayGig && (
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary" />
+                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary z-10" />
                       )}
 
-                      <CardContent className="p-5 space-y-3">
-                        {/* Top row: Title */}
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-lg font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                      {/* Hero Image with overlaid title - Spotify style */}
+                      <div className="relative">
+                        <GigBandImage gig={gig} variant="card" />
+                        
+                        {/* Title & Band overlaid on image */}
+                        <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
+                          <h3 className="text-2xl font-bold leading-tight line-clamp-2 text-white drop-shadow-lg mb-2 group-hover:text-primary/90 transition-colors">
                             {gig.title}
                           </h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-lg text-white/90 font-medium drop-shadow">{gig.band_name || "TBD"}</span>
+                            <VibeTag vibe={gig.gig_mood} />
+                          </div>
                         </div>
+                      </div>
 
-                        {/* Band name + Vibe tag row */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm text-muted-foreground font-medium">{gig.band_name || "TBD"}</span>
-                          <VibeTag vibe={gig.gig_mood} />
-                        </div>
-
+                      <CardContent className="p-5 space-y-3">
                         {/* Date & Call Time pills */}
-                        <div className="flex flex-wrap gap-2 pt-1">
+                        <div className="flex flex-wrap gap-2">
                           <div className={cn(
                             "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold border-2",
                             isTodayGig
-                              ? "bg-primary/15 text-primary border-primary/30"
-                              : "bg-primary/10 text-primary border-primary/20"
+                              ? "bg-orange-600/20 text-orange-600 border-orange-600/40 dark:bg-orange-500/20 dark:text-orange-400 dark:border-orange-500/40"
+                              : "bg-orange-600/15 text-orange-600 border-orange-600/30 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30"
                           )}>
                             <Calendar className="h-3.5 w-3.5" />
                             <span>{isTodayGig ? "Today" : formatDate(gig.date)}</span>
@@ -534,14 +642,19 @@ const ListView = ({ groups, onEdit, onShare, onDelete, onClick, viewFilter, onCr
                   key={gig.id}
                   className={cn(
                     "group flex flex-col md:flex-row md:items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors cursor-pointer relative",
-                    isTodayGig && "border-primary/30 bg-primary/5"
+                    isTodayGig && "border-orange-600/30 bg-orange-600/5 dark:border-orange-500/30 dark:bg-orange-500/5"
                   )}
                   onClick={() => onClick(gig.id)}
                 >
+                  {/* Band Thumbnail */}
+                  <div className="shrink-0">
+                    <GigBandImage gig={gig} variant="thumbnail" />
+                  </div>
+
                   {/* Status & Date Column */}
                   <div className="flex items-center gap-3 md:w-48 shrink-0">
                     <div className="flex flex-col">
-                      <span className={cn("font-bold text-lg leading-none", isTodayGig && "text-primary")}>
+                      <span className={cn("font-bold text-lg leading-none", isTodayGig && "text-orange-600 dark:text-orange-400")}>
                         {formatDate(gig.date)}
                       </span>
                       <span className="text-sm text-muted-foreground">{gig.call_time || "TBD"}</span>
@@ -598,21 +711,22 @@ const CompactView = ({ groups, onEdit, onShare, onDelete, onClick, viewFilter, o
                   key={gig.id}
                   className={cn(
                     "hover:bg-accent/5 hover:border-primary/30 cursor-pointer transition-all",
-                    isTodayGig && "border-primary/30 bg-primary/5"
+                    isTodayGig && "border-orange-600/30 bg-orange-600/5 dark:border-orange-500/30 dark:bg-orange-500/5"
                   )}
                   onClick={() => onClick(gig.id)}
                 >
                   <CardContent className="p-3 space-y-2">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-semibold truncate leading-tight">{gig.title}</span>
+                    {/* Header with Image */}
+                    <div className="flex items-start gap-2">
+                      <GigBandImage gig={gig} variant="compact" />
+                      <span className="font-semibold truncate leading-tight flex-1">{gig.title}</span>
                     </div>
 
                     {/* Time & Location */}
                     <div className="text-sm space-y-0.5 text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5 shrink-0" />
-                        <span className={cn(isTodayGig && "text-primary font-medium")}>
+                        <span className={cn(isTodayGig && "text-orange-600 dark:text-orange-400 font-medium")}>
                            {formatDate(gig.date)} {gig.call_time && `• ${gig.call_time}`}
                         </span>
                       </div>
@@ -685,6 +799,8 @@ const toListItem = (pack: GigPack): GigPackListItem => ({
   updated_at: pack.updated_at,
   created_at: pack.created_at,
   gig_mood: pack.gig_mood,
+  hero_image_url: pack.hero_image_url,
+  band_logo_url: pack.band_logo_url,
 });
 
 export function GigPacksClientPage({
@@ -695,6 +811,7 @@ export function GigPacksClientPage({
   const { toast } = useToast();
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
+  const searchParams = useSearchParams();
   
   // Layout State
   const [viewMode, setViewMode] = useState<ViewMode>("board");
@@ -704,10 +821,27 @@ export function GigPacksClientPage({
     sortGigPacks(initialGigPacks),
   );
   
-  // Computed grouped gigs
+  // Get search query from URL
+  const searchQuery = searchParams.get("search") || "";
+  
+  // Filter gigs based on search query
+  const filteredGigPacks = useMemo(() => {
+    if (!searchQuery.trim()) return gigPacks;
+    
+    const query = searchQuery.toLowerCase();
+    return gigPacks.filter((gig) => {
+      return (
+        gig.title?.toLowerCase().includes(query) ||
+        gig.band_name?.toLowerCase().includes(query) ||
+        gig.venue_name?.toLowerCase().includes(query)
+      );
+    });
+  }, [gigPacks, searchQuery]);
+  
+  // Computed grouped gigs (use filtered gigs)
   const groupedGigs = useMemo(() => {
-    return groupGigsByTime(gigPacks, viewFilter);
-  }, [gigPacks, viewFilter]);
+    return groupGigsByTime(filteredGigPacks, viewFilter);
+  }, [filteredGigPacks, viewFilter]);
 
   const [activePanel, setActivePanel] = useState<GigPackSheetState | null>(
     initialSheetState,
@@ -896,7 +1030,7 @@ export function GigPacksClientPage({
         </div>
 
         {/* Today / Next Up Strip */}
-        <NextUpStrip gigs={gigPacks} />
+        <NextUpStrip gigs={filteredGigPacks} />
 
         {/* Controls Bar: Layout Switcher + Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
@@ -906,6 +1040,7 @@ export function GigPacksClientPage({
                 <ViewFilterPills value={viewFilter} onChange={setViewFilter} />
                 <p className="text-sm text-muted-foreground min-w-[60px] text-right">
                   {groupedGigs.reduce((acc, group) => acc + group.gigs.length, 0)} gigs
+                  {searchQuery && ` (filtered)`}
                 </p>
              </div>
         </div>
