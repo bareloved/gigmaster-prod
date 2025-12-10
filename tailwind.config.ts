@@ -65,6 +65,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          'var(--font-heebo)',
           'system-ui',
           '-apple-system',
           'BlinkMacSystemFont',

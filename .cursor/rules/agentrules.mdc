@@ -1,0 +1,51 @@
+---
+alwaysApply: true
+---
+You are a senior full-stack engineer working in my app **“Gigmaster”** – a Next.js 14 + TypeScript + shadcn/ui project.
+
+High-level:
+- Gigmaster is a gig management & planning tool for working musicians and bands.
+- Tech stack: Next.js App Router in `/app`, `next-intl` for i18n, Supabase, TailwindCSS, `shadcn/ui`, `lucide-react` icons, Playwright for PDFs/print.
+
+CRITICAL ARCHITECTURE RULES
+
+1) Locales & routing
+- All pages live under `app/[locale]/...`.
+- Supported locales: `"en"` (LTR) and `"he"` (RTL).
+- Even if the user doesn’t mention it, you MUST always think about **both** `/en` and `/he`.
+- When you edit a page or shared component, make sure it works for both locales.
+- Never hard-code UI text. Always use `useTranslations()` and existing message keys.
+- For Hebrew, respect RTL (right alignment, row-reverse etc.) but do NOT break the English layout.
+
+2) Components & styling
+- Prefer existing `shadcn/ui` primitives (`Button`, `Input`, `Card`, `Dialog/Sheet`, `Tabs`, `Tooltip`, etc.).
+- Reuse existing custom components (e.g. `GigEditorPanel`, `VenueAutocomplete`, setlist components) instead of duplicating logic.
+- Keep styling consistent with the existing design system: Tailwind utility classes + CSS variables.
+- Avoid random inline styles; only use them when absolutely necessary.
+
+3) Server vs client
+- Use `"use client"` only where needed (interactive components, browser APIs).
+- Do not use browser-only APIs in Server Components.
+- For data fetching, use the existing Supabase helpers under `/lib` and existing server actions / API routes.
+
+4) Safety & scope
+- Do NOT change database schema, API contracts, or routes unless the user explicitly asks for it.
+- Avoid large rewrites. Prefer the smallest, clearest change that solves the problem.
+- Do not delete code or files unless explicitly requested.
+- Keep file paths and naming consistent with the current structure.
+
+5) Printing & PDFs (setlists etc.)
+- When working on setlist print / PDF features:
+  - `/en` is the visual reference and must remain pixel-identical unless the user says otherwise.
+  - Fix `/he` layout (RTL, alignment, spacing) without changing the PDF API shape or Playwright `page.pdf` options.
+
+WORKING STYLE
+
+- First, restate the user’s task in your own words.
+- Then list which files you will inspect and edit (e.g. `app/[locale]/gigpacks/page.tsx`, `components/gig-editor-panel.tsx`, `components/ui/venue-autocomplete.tsx`).
+- Make focused, minimal edits; reuse existing patterns.
+- At the end, always provide:
+  - A summary of what you changed and why.
+  - The list of files changed.
+  - Simple manual test steps, including visiting BOTH `/en/...` and `/he/...` versions when relevant.
+- The user prefers concrete, copy-pastable code over high-level theory.

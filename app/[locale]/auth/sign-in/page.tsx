@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { AppLogo } from "@/components/app-logo";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -62,8 +63,10 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center">{t("signInTitle")}</CardTitle>
+        <CardHeader className="space-y-6">
+          <div className="flex justify-center">
+            <AppLogo size="lg" className="h-24 sm:h-28" />
+          </div>
           <CardDescription className="text-center">
             {t("signInDescription")}
           </CardDescription>

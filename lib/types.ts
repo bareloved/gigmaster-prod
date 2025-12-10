@@ -32,6 +32,46 @@ export type GigPackTheme = "minimal" | "vintage_poster" | "social_card";
 
 export type PosterSkin = "clean" | "paper" | "grain";
 
+// Band Types
+export interface Band {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string | null;
+  band_logo_url: string | null;
+  hero_image_url: string | null;
+  accent_color: string | null;
+  poster_skin: PosterSkin | null;
+  default_lineup: LineupMember[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type BandInsert = Omit<Band, "id" | "created_at" | "updated_at">;
+export type BandUpdate = Partial<Omit<Band, "id" | "owner_id" | "created_at">>;
+
+// Materials Types
+export type GigMaterialKind =
+  | "rehearsal"
+  | "performance"
+  | "charts"
+  | "reference"
+  | "other";
+
+export interface GigMaterial {
+  id: string;           // string UUID
+  label: string;        // e.g. "Rehearsal 1 – 2025-05-10"
+  url: string;          // full URL
+  kind: GigMaterialKind;
+}
+
+// Schedule Types
+export interface GigScheduleItem {
+  id: string;           // Unique ID (UUID or stable string)
+  time: string | null;  // "HH:mm" in 24h format, e.g. "18:30"
+  label: string;        // description, e.g. "Soundcheck"
+}
+
 // Packing Checklist Types
 export interface PackingChecklistItem {
   id: string;      // Unique ID (UUID or stable string)
@@ -47,7 +87,8 @@ export interface GigPack {
   id: string;
   owner_id: string;
   title: string;
-  band_name: string | null;
+  band_id: string | null; // Reference to bands table (new)
+  band_name: string | null; // Keep for backward compatibility
   date: string | null;
   call_time: string | null;
   on_stage_time: string | null;
@@ -76,6 +117,10 @@ export interface GigPack {
   packing_checklist: PackingChecklistItem[] | null;
   // Gig mood - vibe/context tag
   gig_mood: string | null;
+  // Materials - links to recordings, charts, etc.
+  materials: GigMaterial[] | null;
+  // Schedule - timeline for the day
+  schedule: GigScheduleItem[] | null;
 }
 
 export type GigPackInsert = Omit<GigPack, "id" | "created_at" | "updated_at">;

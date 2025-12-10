@@ -180,7 +180,7 @@ export function TimePicker({
           ref={containerRef}
           onClick={handleContainerClick}
           className={cn(
-            "flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring md:text-sm cursor-text",
+            "flex h-8 w-full items-center rounded-md border border-input bg-transparent px-2 py-1 text-sm shadow-sm transition-colors focus-within:ring-1 focus-within:ring-ring cursor-text",
             disabled && "cursor-not-allowed opacity-50",
             className
           )}
@@ -196,7 +196,7 @@ export function TimePicker({
             disabled={disabled}
             className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground cursor-text"
           />
-          <Clock className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <Clock className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </div>
       </PopoverAnchor>
       <PopoverContent 
