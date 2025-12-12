@@ -82,7 +82,7 @@ export function GigPackShareDialog({
 
   const message2 = t("message2", {
     title: gigPack.title,
-    date: dateStr,
+    date: dateStr || t("upcoming"),
     venue: venueStr,
     url: publicUrl,
   });
