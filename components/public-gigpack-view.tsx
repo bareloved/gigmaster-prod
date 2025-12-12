@@ -204,7 +204,7 @@ export function PublicGigPackView({ initialGigPack, slug, locale = "en" }: Publi
   const renderThemeLayout = () => {
     console.log("[PublicGigPackView] Rendering theme layout for theme:", theme);
     try {
-      return <MinimalLayout gigPack={gigPack} openMaps={openMaps} slug={slug} locale={locale} />;
+        return <MinimalLayout gigPack={gigPack} openMaps={openMaps} slug={slug} locale={locale} />;
     } catch (error) {
       console.error("[PublicGigPackView] Error in renderThemeLayout:", error);
       throw error;
@@ -215,9 +215,9 @@ export function PublicGigPackView({ initialGigPack, slug, locale = "en" }: Publi
 
   return (
     <PublicGigPackErrorBoundary slug={slug}>
-      <TooltipProvider>
-        {/* Render either Rehearsal View or normal theme layout */}
-        {isRehearsalMode ? (
+    <TooltipProvider>
+      {/* Render either Rehearsal View or normal theme layout */}
+      {isRehearsalMode ? (
           (() => {
             console.log("[PublicGigPackView] Rendering RehearsalView");
             try {
@@ -227,9 +227,9 @@ export function PublicGigPackView({ initialGigPack, slug, locale = "en" }: Publi
               throw error;
             }
           })()
-        ) : (
-          renderThemeLayout()
-        )}
+      ) : (
+        renderThemeLayout()
+      )}
       
       {/* Controls - Top right corner */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
@@ -281,7 +281,7 @@ export function PublicGigPackView({ initialGigPack, slug, locale = "en" }: Publi
           <span className="sm:hidden">{isUserActive ? t("statusLive") : t("statusIdle")}</span>
         </div>
       </div>
-      </TooltipProvider>
+    </TooltipProvider>
     </PublicGigPackErrorBoundary>
   );
 }

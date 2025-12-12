@@ -36,7 +36,7 @@ export function MinimalLayout({ gigPack, openMaps, slug, locale = "en" }: Minima
   });
 
   const [setlistExpanded, setSetlistExpanded] = useState(false);
-
+  
   // Get branding values with fallbacks
   const accentColor = gigPack.accent_color || "hsl(var(--primary))";
   const posterSkin = gigPack.poster_skin || "clean";
